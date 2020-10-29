@@ -20,9 +20,9 @@
 #include "../common/Approximation.hpp"
 #include "../common/Interpolation.hpp"
 #include "../common/PiecewiseBSpline.hpp"
-#include "../common/SplineSpectrum.hpp"
 #include "../common/Spectrum.hpp"
 #include "../common/Dimension.h"
+#include "../common/Instrument.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <QtDataVisualization>
@@ -81,17 +81,15 @@ protected:
 
 private:
   friend class DiginstrumentView;
-  /*TMP*/
   Diginstrument::Synthesizer synth;
-  //TODO: make inst spectrum type work - discrete only for now
-  //TODO: TMP: separate instruments; rethink this template
-  Diginstrument::Interpolator<double, SplineSpectrum<double, 4>> spline_inst;
-  Diginstrument::Interpolator<double, Diginstrument::NoteSpectrum<double>> inst;
-  std::string fileName;
-  InstrumentData inst_data;
+  Diginstrument::Interpolator<double, SplineSpectrum<double, 4>> interpolator;
+  //TODO: maybe "reroute" spectra so that they wont be duplicated in interpolator and instrument
+  Diginstrument::Instrument<SplineSpectrum<double, 4>, double> instrument;
 
   bool setInstrumentFile(const QString & fileName);
   bool loadInstrumentFile();
+
+  std::string fileName;
 
 private slots:
   void sampleRateChanged();

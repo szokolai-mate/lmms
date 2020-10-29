@@ -12,11 +12,53 @@ using namespace Diginstrument;
 template <typename T, class S>
 S Diginstrument::Interpolator<T, S>::getSpectrum(const std::vector<T> &coordinates)
 {
-    return data.processIntoRoot(coordinates,
-        [this](const S &left, const S &right, const T &target, const T &leftLabel, const T &rightLabel, const unsigned int dimension)
+    return residual.processIntoRoot(coordinates,
+        [this](const S &left, const S &right, const T &target, const T &leftLabel, const T &rightLabel, const unsigned int dimension)->S
         {
             return interpolateSpectra(left, right, target, leftLabel, rightLabel, dimensions[dimension].shifting);
-        });
+        },
+        [](const S &single)->S
+        {
+            return single;
+        }
+        );
+}
+
+/**
+ * Interpolate a time-slice of the partials corresponding to the given coordinates, frame offset and amount of frames
+ */
+template <typename T, class S>
+PartialSet<T> Diginstrument::Interpolator<T, S>::getPartials(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames)
+{
+    return partials.processIntoRoot(coordinates,
+            [this, startFrame, frames](const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const unsigned int dimension)
+            ->PartialSet<T>
+            {
+                //TODO: better slicing detection
+                if(left.get().size()>0 && left.get().front().size()>frames)
+                {
+                    return interpolatePartialSet(left.getSlice(startFrame, frames), right.getSlice(startFrame, frames), target, leftLabel, rightLabel, dimensions[dimension].shifting);
+                }
+                return interpolatePartialSet(left, right, target, leftLabel, rightLabel, dimensions[dimension].shifting);
+            },
+            [startFrame, frames](const PartialSet<T> & single)->PartialSet<T> 
+            {
+                if(single.get().size()>0 && single.get().front().size()>frames)
+                {
+                    return single.getSlice(startFrame, frames);
+                }
+                return single;
+            }
+    );
+}
+
+template <typename T, class S>
+PartialSet<T> Diginstrument::Interpolator<T, S>::interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting)
+{
+    //TODO
+    //tmp: unimplemented warning
+    cout<<"reached interpolation"<<endl;
+    return left;
 }
 
 /**
@@ -126,7 +168,7 @@ NoteSpectrum<T> Diginstrument::Interpolator<T, S>::constructSpectrum(
             res.emplace_back(rightMatchables[unmatched].frequency, 0, rightMatchables[unmatched].amplitude * rightWeight);
         }
     }
-    return Diginstrument::NoteSpectrum<T>(target, res, {});
+    return Diginstrument::NoteSpectrum<T>(res, {});
 }
 
 template <typename T, typename S>
@@ -152,7 +194,11 @@ SplineSpectrum<T, 4> Diginstrument::Interpolator<T, S>::constructSpectrum(
     //TODO: is stretching unmatched the desired behaviour?
     //TODO: TMP: FIXME: we assume that the first match is the fundamental frequency
     //TMP: TODO: FIXME: this "dumb stretching" could potentially cause pieces to overlap, if the shift target is > nextPiece.end or < piece.begin
-    if(matches.size()>0)
+    //TMP:disabled unmatched shifting
+    //TODO: bughunt: this made the spline version of 440 die, because it shifted a low component even lower, causing the dumb stretching to have a end(0.07)<begin(10) schenario
+    //TODO: consider if shifting unmatched components is even desireable.
+    //      -> when can we get unmatched?
+    /*if(matches.size()>0)
     {
         const T leftFF = (target/leftCopy.getMatchables()[matches.front().left].frequency);
         for(const auto & unmatched : unmatchedLeft)
@@ -173,7 +219,7 @@ SplineSpectrum<T, 4> Diginstrument::Interpolator<T, S>::constructSpectrum(
             piece.stretchTo(piece.getBegin(), target);
             nextPiece.stretchTo(target, nextPiece.getEnd());
         }
-    }
+    }*/
     
     //stretch matched peaks to target
     for(auto & match : matches)
@@ -195,13 +241,45 @@ template <typename T, class S>
 void Diginstrument::Interpolator<T, S>::addSpectrum(const S &spectrum, std::vector<T> coordinates)
 {
     //TODO:test, check, better
-    data.insert(spectrum, coordinates);
+    residual.insert(spectrum, coordinates);
 }
+
+template <typename T, class S>
+void Diginstrument::Interpolator<T, S>::addSpectra(const std::vector<S> &spectra)
+{
+    //TODO:test, check, better
+    for(const auto & s : spectra)
+    {
+        vector<T> labels;
+        for(const auto & l : s.getLabels())
+        {
+            labels.push_back(l.second);
+        }
+        residual.insert(s, labels);
+    }
+}
+
+template <typename T, class S>
+void Diginstrument::Interpolator<T, S>::addPartialSets(const std::vector<PartialSet<T>> & partialSets)
+{
+    //TODO:test, check, better
+    for(const auto & p : partialSets)
+    {
+        vector<T> labels;
+        for(const auto & l : p.getLabels())
+        {
+            labels.push_back(l.second);
+        }
+        partials.insert(p, labels);
+    }
+}
+
 
 template <typename T, class S>
 void Diginstrument::Interpolator<T, S>::clear()
 {
-    data.clear();
+    partials.clear();
+    residual.clear();
     dimensions.clear();
 }
 
@@ -224,6 +302,8 @@ const std::vector<Dimension> & Diginstrument::Interpolator<T, S>::getDimensions(
 template <typename T, typename S>
 PiecewiseBSpline<T, 4> Diginstrument::Interpolator<T, S>::consolidatePieces(PiecewiseBSpline<T, 4> &left, PiecewiseBSpline<T, 4> &right, T rightRatio)
 {
+    //TMP: TODO: max distance of ends
+    const T maxDistance = 0.01;
     //TODO: padding
     //TODO: FIXME: if we have a very short piece, splitting it could result in a ratio of 0
     PiecewiseBSpline<T, 4> res;
@@ -235,7 +315,7 @@ PiecewiseBSpline<T, 4> Diginstrument::Interpolator<T, S>::consolidatePieces(Piec
     while (!leftPieces.empty() && !rightPieces.empty())
     {
         //matched pieces
-        if(leftPieces.back().getEnd() == rightPieces.back().getEnd())
+        if( abs(leftPieces.back().getEnd() - rightPieces.back().getEnd()) <= maxDistance )
         {
             res.add(mergePieces(leftPieces.back().getSpline(), rightPieces.back().getSpline(), rightRatio));
             leftPieces.pop_back();

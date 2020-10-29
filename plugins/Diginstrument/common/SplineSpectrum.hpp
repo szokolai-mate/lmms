@@ -7,12 +7,12 @@ template <typename T, unsigned int D>
 class SplineSpectrum : public Diginstrument::Spectrum<T>
 {
 public:
-  SplineSpectrum() : Diginstrument::Spectrum<T>(0) {}
-  SplineSpectrum(T label) : Diginstrument::Spectrum<T>(label), spline() {}
-  SplineSpectrum(PiecewiseBSpline<T, D> &&spline) : Diginstrument::Spectrum<T>(0), spline(std::move(spline)) {}
-  SplineSpectrum(const PiecewiseBSpline<T, D> &spline) : Diginstrument::Spectrum<T>(0), spline(spline) {}
-  SplineSpectrum(PiecewiseBSpline<T, D> &&spline, T label) : Diginstrument::Spectrum<T>(label), spline(std::move(spline)) {}
-  SplineSpectrum(const PiecewiseBSpline<T, D> &spline, T label) : Diginstrument::Spectrum<T>(label), spline(spline) {}
+  SplineSpectrum() : Diginstrument::Spectrum<T>({}) {}
+  SplineSpectrum(std::vector<std::pair<std::string, T>> labels) : Diginstrument::Spectrum<T>(labels), spline() {}
+  SplineSpectrum(PiecewiseBSpline<T, D> &&spline) : Diginstrument::Spectrum<T>({}), spline(std::move(spline)) {}
+  SplineSpectrum(const PiecewiseBSpline<T, D> &spline) : Diginstrument::Spectrum<T>({}), spline(spline) {}
+  SplineSpectrum(PiecewiseBSpline<T, D> &&spline, std::vector<std::pair<std::string, T>> labels) : Diginstrument::Spectrum<T>(labels), spline(std::move(spline)) {}
+  SplineSpectrum(const PiecewiseBSpline<T, D> &spline, std::vector<std::pair<std::string, T>> labels) : Diginstrument::Spectrum<T>(labels), spline(spline) {}
 
   std::vector<Diginstrument::Component<T>> getMatchables() const
   {
@@ -80,5 +80,4 @@ public:
 
 private:
   PiecewiseBSpline<T, D> spline;
-  T label;
 };

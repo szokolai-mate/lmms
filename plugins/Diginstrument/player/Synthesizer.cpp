@@ -3,12 +3,12 @@
 #define DEFAULT_SAMPLE_RATE 48000
 #define DEFAULT_OSCILLATORS 5
 
-//tmp
-#include <iostream>
-
 //TODO: refactor, trim/remove old code
 //TODO: spline synthesis
 //TODO: how to deal with quality?
+
+//tmp
+#include <iostream>
 
 unsigned int Diginstrument::Synthesizer::outSampleRate = DEFAULT_SAMPLE_RATE;
 std::vector<float> Diginstrument::Synthesizer::sinetable(0);
@@ -23,13 +23,14 @@ std::vector<float> Diginstrument::Synthesizer::playNote(std::vector<Diginstrumen
     //ordering banks by amplitude can be a problem, if amps change close to eachother
     std::sort(components.begin(), components.end(), Component<double>::sortByAmplitudeDescending);
     for(auto & component : components)
-    {//tmp
-        //std::cout<<component.frequency<<" "<<component.amplitude<<std::endl;
+    {
         //tmp
         if (component.amplitude < 0.001)
             continue;
 
         const unsigned int step = std::round(component.frequency * ((double)sinetable.size() / (double)sampleRate));
+        //tmp: magnitude spectrogram: moved conversion from magnitude to amplitude here
+        component.amplitude = sqrt( (component.frequency * component.amplitude) / (double)sampleRate);
 
         for (int i = 0; i < frames; i++)
         {
@@ -40,6 +41,23 @@ std::vector<float> Diginstrument::Synthesizer::playNote(std::vector<Diginstrumen
     }
     return res;
 }
+
+std::vector<float> Diginstrument::Synthesizer::playNote(const PartialSet<double> & slice, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
+{
+    //TODO
+    std::vector<float> res(frames, 0);
+    //tmp: debug
+    std::cout<<"partials: "<<slice.get().size()<<std::endl;
+    for(const auto & partial : slice.get())
+    {
+        for(int i = 0; i<partial.size(); i++)
+        {
+            res[i] += cos(partial[i].phase) * partial[i].amplitude;
+        }
+    }
+    return res;
+}
+
 
 //TODO: refactor spline synthesis
 // std::vector<float> Diginstrument::Synthesizer::playNote(const Spectrum<double> & spectrum, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
