@@ -57,6 +57,11 @@ class PartialSet
         return sampleRate;
     }
 
+    bool empty() const
+    {
+        return partials.empty();
+    }
+
     PartialSet<T> getSlice(unsigned int startFrame, unsigned int frames) const
     {
         //TODO: actually use sampleRate
@@ -71,5 +76,16 @@ class PartialSet
             else{ slice.emplace_back(p.begin()+startFrame, p.begin()+startFrame+frames); }
         }
         return PartialSet<T>(std::move(slice), this->labels, sampleRate);
+    }
+
+    std::vector<Diginstrument::Component<T>> getMatchables() const
+    {
+        std::vector<Diginstrument::Component<T>> res;
+        res.reserve(this->partials.size());
+        for(const auto & p : partials)
+        {
+            res.push_back(p.front());
+        }
+        return res;
     }
 };

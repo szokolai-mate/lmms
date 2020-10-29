@@ -56,9 +56,63 @@ template <typename T, class S>
 PartialSet<T> Diginstrument::Interpolator<T, S>::interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting)
 {
     //TODO
-    //tmp: unimplemented warning
-    cout<<"reached interpolation"<<endl;
-    return left;
+    //tmp
+    if(left.empty()) return right;
+    if(right.empty()) return left;
+    //TMP: copied from spectrum
+    vector<Match> matches;
+    vector<unsigned int> unmatchedLeft;
+    vector<unsigned int> unmatchedRight;
+
+    if (left.empty() || !shifting)
+    {
+        //return attenuated right
+        unmatchedRight.resize(right.getMatchables().size());
+        for(int i = 0; i<unmatchedRight.size(); i++)
+        {
+            unmatchedRight[i]=i;
+        }
+    }
+    if (right.empty() || !shifting)
+    {
+        //return attenuated left
+        unmatchedLeft.resize(left.getMatchables().size());
+        for(int i = 0; i<unmatchedLeft.size(); i++)
+        {
+            unmatchedLeft[i]=i;
+        }
+    }
+    if(shifting && !right.empty() && !left.empty())
+    {
+        matches = PeakMatcher::matchPeaks(left.getMatchables(), right.getMatchables(), unmatchedLeft, unmatchedRight);
+    }
+
+    //tmp: here
+    //calculate shifting metrics
+    const T rightWeight = (target-leftLabel) / (rightLabel - leftLabel);
+    const T leftWeight = 1.0f - rightWeight;
+    //todo: labels or sample rate needed?
+    //TODO: only if not empty
+    const int limit = std::min(left.get().front().size(), right.get().front().size());
+    PartialSet<T> res;
+    for(const auto & match : matches)
+    {
+        std::vector<Diginstrument::Component<T>> partial;
+        partial.reserve(limit);
+        for(int i = 0; i<limit; i++)
+        {
+            const Diginstrument::Component<T> leftComponent = left.get()[match.left][i];
+            const Diginstrument::Component<T> rightComponent = right.get()[match.right][i];
+            //TMP: simple linear interpolation and avg amp
+            //TODO: frequency! sliding? what?!
+            partial.emplace_back(/*tmp*/ target ,
+             (leftComponent.phase*leftWeight+rightComponent.phase*rightWeight),
+             (leftComponent.amplitude*leftWeight+rightComponent.amplitude*rightWeight)
+            );
+        }
+        res.add(std::move(partial));
+    }
+    return res;
 }
 
 /**

@@ -61,6 +61,8 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 	/*TMP*/
 	const double startTime = noteHandle->totalFramesPlayed() / (double)Engine::mixer()->processingSampleRate();
 	vector<double> coordinates = {noteHandle->frequency()};
+	//tmp:
+	cout<<"fr: "<<coordinates.front()<<endl;
 	//TODO: first coordinate is freq, might not be correct?
 	coordinates.reserve(this->coordinates.size()+2);
 	for(auto c : this->coordinates)
@@ -167,4 +169,22 @@ QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfa
 	}
 
 	return data;
+}
+
+std::vector<Diginstrument::Component<double>> DiginstrumentPlugin::getPartialVisualization(float minTimeMilisec, float maxTimeMilisec, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<double> coordinates)
+{
+	std::vector<Diginstrument::Component<double>> res;
+	//TODO: sample rate is needed here
+	const int sampleRate = 44100;
+	const auto partials = interpolator.getPartials(coordinates, (minTimeMilisec/1000.0)*sampleRate, ((maxTimeMilisec-minTimeMilisec)/1000.0)*sampleRate).get();
+	for(const auto & partial : partials)
+	{
+		for(int i = 1; i<partial.size(); i+=sampleRate/pointsPerSeconds)
+		{
+			const double freq = abs(((partial[i].phase - partial[i-1].phase) * sampleRate) / (2*M_PI));
+			//pretty bad, i use phase as time
+			res.emplace_back(freq, (double)i/(double)sampleRate, partial[i].amplitude);
+		}
+	}
+	return res;
 }

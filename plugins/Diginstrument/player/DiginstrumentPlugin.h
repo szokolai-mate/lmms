@@ -75,6 +75,7 @@ public:
   }
 
   QtDataVisualization::QSurfaceDataArray * getInstrumentSurfaceData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<double> coordinates);
+  std::vector<Diginstrument::Component<double>> getPartialVisualization(float minTime, float maxTime, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<double> coordinates);
 
 protected:
   std::vector<double> coordinates;

@@ -4,6 +4,7 @@
 #include "DiginstrumentPlugin.h"
 #include "../common/InstrumentVisualizationWindow.h"
 #include "../common/Qt/LabeledFieldSlider.h"
+#include "../common/Qt/ColorPalette.hpp"
 
 #include <QPushButton>
 #include <QLineEdit>

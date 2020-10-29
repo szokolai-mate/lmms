@@ -19,7 +19,7 @@ AnalyzerView::AnalyzerView(ToolPlugin * _parent ) :
     connect( m_openVisualizationButton, SIGNAL( clicked() ),
             this, SLOT( showVisualization() ) );
     connect( m_addDimensionButton, SIGNAL( clicked() ),
-            this, SLOT( addCoordinate() ) );
+            this, SLOT( addDimension() ) );
     connect( m_saveToFileButton, SIGNAL( clicked() ),
             this, SLOT( writeInstrumentToFile() ) );
 

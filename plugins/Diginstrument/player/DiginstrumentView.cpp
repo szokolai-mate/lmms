@@ -80,6 +80,18 @@ void DiginstrumentView::showInstumentVisualization()
 void DiginstrumentView::updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<double> coordinates)
 {
   visualization->setSurfaceData(castModel<DiginstrumentPlugin>()->getInstrumentSurfaceData(minTime/1000.0f,maxTime/1000.0f,minFreq,maxFreq,timeSamples,freqSamples, coordinates));
+  visualization->removeCustomItems();
+  int j = 0;
+  const auto partials = castModel<DiginstrumentPlugin>()->getPartialVisualization(minTime, maxTime, minFreq, maxFreq, /*tmp*/ 100, coordinates);
+  const auto palette = Diginstrument::ColorPalette::generatePaletteTextures(partials.size());
+  for(const auto & c : partials)
+  {
+    visualization->addCustomItem(new QCustom3DItem("/home/mate/projects/lmms/plugins/Diginstrument/analyzer/resources/marker_mesh.obj",
+												QVector3D(c.frequency, c.amplitude,c.phase),
+												QVector3D(0.01f, 0.01f, 0.01f),
+												QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
+												palette[j]));
+  }
 }
 
 void DiginstrumentView::setDimensions()
