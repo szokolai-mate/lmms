@@ -52,7 +52,7 @@ QString AnalyzerPlugin::fullDisplayName() const
 }
 
 //TMP
-std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pair<string, double>> coordinates)
+std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pair<string, double>> coordinates, double partialCutoffParameter, double residualCutoffParameter)
 {
 	//TMP: keep for visualization
 	spectra.clear();
@@ -68,7 +68,16 @@ std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pai
 	//tmp:visualization
 	visualization = new Diginstrument::InstrumentVisualizationWindow(this);
 
-	analyze(sample, subtractiveAnalysis(sample, m_sampleBuffer.sampleRate(), coordinates), coordinates);
+	const auto partials = subtractiveAnalysis(sample, m_sampleBuffer.sampleRate(), coordinates, partialCutoffParameter);
+	analyze(sample, partials, coordinates, residualCutoffParameter);
+	//TMP: some error stats
+	auto absRes = sample;
+	for(auto & e : absRes)
+	{
+		e = std::abs(e);
+	}
+	cout<<"highest amp in residual: "<<*max_element(absRes.begin(), absRes.end())<<std::endl;
+	cout<<"average amp in residual: "<<std::accumulate(absRes.begin(), absRes.end(), 0.0) / absRes.size()<<std::endl;
 
 	//tmp: show raw visualization
 	visualization->show();
@@ -123,7 +132,7 @@ void AnalyzerPlugin::writeInstrumentToFile(std::string filename)
 	}
 }
 
-void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std::vector<Diginstrument::Component<double>>> partials, vector<pair<string, double>> coordinates)
+void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std::vector<Diginstrument::Component<double>>> partials, vector<pair<string, double>> coordinates, double cutoff)
 {
 	//do CWT
 	const int level = 18;
@@ -136,6 +145,7 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 
 	//tmp: statistics
 	int rejected = 0;
+	int accepted = 0;
 	int noComponents = 0;
 	int incomplete = 0;
 	int emptySplines = 0;
@@ -182,8 +192,9 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 		//seek critical points with discrete differential, then approximate hidden/overlapping peaks and filter to only include maxima
 		//const auto peaks = Diginstrument::PeakApproximation(Extrema::Differential::intermixed(rawSpectrum.begin(), rawSpectrum.end()));
 		//tmp: trying to fix weird interpolation problem, just use maxima for now, as hidden peaks are still primitive
-		//const auto peaks = Extrema::Differential::maxima(rawSpectrum.begin(), rawSpectrum.end(), 0.001);
-		const auto currentPartials = partials[i];
+		//maybe: minprominence here should be independent of freq?
+		const auto peaks = Extrema::Differential::maxima(rawSpectrum.begin(), rawSpectrum.end(), [cutoff](double fr)->double{return cutoff;});
+		//const auto currentPartials = partials[i];
 		//TODO: is this the best place to convert to amp?
 		//after determining peaks, convert magnitude to amplitude
 		//TMP: magnitude spectrogram
@@ -193,7 +204,7 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 			p[1] = (sqrt( (p[0] * p[1]) / (double)m_sampleBuffer.sampleRate()));
 		}*/
 		//tmp: visualize peaks
-		/*for (auto p : peaks)
+		for (auto p : peaks)
 		{
 			const auto Y = Interpolation::CubicLagrange(rawSpectrum[p.index-1].first, rawSpectrum[p.index-1].second, rawSpectrum[p.index].first, rawSpectrum[p.index].second, rawSpectrum[p.index+1].first, rawSpectrum[p.index+1].second, rawSpectrum[p.index+2].first, rawSpectrum[p.index+2].second, p.x);
 			if(p.pointType==Extrema::Differential::CriticalPoint::PointType::maximum)
@@ -205,20 +216,18 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 											QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
 											colorRed));
 			}
-		}*/
+		}
 	
 		//fit spline to raw spectrum
 		//tmp: just conver pairs back into vectors
-		/*vector<vector<double>> convertedRawSpectrum;
+		vector<vector<double>> convertedRawSpectrum;
 		for(auto & p : rawSpectrum)
 		{
 			convertedRawSpectrum.push_back({p.first, p.second});
 		}
-		auto spline = fitter.peakFit(convertedRawSpectrum, peaks);*/
+		auto spline = fitter.peakFit(convertedRawSpectrum, peaks);
 		//auto spline = fitter.fitToPartials(rawSpectrum, currentPartials);
-		//only add "valid" splines
-		//inst.add(Diginstrument::TimeSlice<double, 4>(currentPartials, std::vector<std::pair<std::string, double>>{std::make_pair("time",(double)i/(double)m_sampleBuffer.sampleRate())}));
-		/*if (spline.getPieces().size() > 0 && spline.getBegin() <= 12 && spline.getEnd() > 21000)
+		if (spline.getPieces().size() > 0 && spline.getBegin() <= 12 && spline.getEnd() > 21000)
 		{
 			//TMP: keep for visualization
 			//spectra.emplace_back(spline,std::vector<std::pair<std::string, double>>{std::make_pair("time",(double)i/(double)m_sampleBuffer.sampleRate())});
@@ -228,9 +237,11 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 				std::move(spline),
 				std::move(coordinatesCopy)
 				));
-		}*/
+			accepted++;
+			std::cout<<"accepted spline at time "<<(double)i/(double)m_sampleBuffer.sampleRate()<<std::endl;
+		}
 		//TMP: rejection statistics
-		/*else
+		else
 		{
 			if(spline.getPeaks().size()==0 && spline.getEnd()>0) {noComponents++;}
 			if(spline.getPieces().size()==0) {emptySplines++;}
@@ -238,7 +249,7 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 			if(spline.getBegin()<12 && spline.getEnd()<21000 && spline.getBegin()>0 && spline.getEnd()>0) { goodBeginBadEnd++; }
 			if(spline.getBegin()>12 && spline.getEnd()>21000 && spline.getBegin()>0 && spline.getEnd()>0) { badBedginGoodEnd++; }
 			rejected++;
-		}*/
+		}
 	}
 	//tmp: add an empty spline at the end for silence
 	auto coordinatesCopy = coordinates;
@@ -246,7 +257,7 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 	inst.add(SplineSpectrum<double, 4>(PiecewiseBSpline<double, 4>(),coordinatesCopy));
 	
 	//tmp: debug
-	//if(spectra.size()>0) std::cout<<"rejected splines: "<<rejected<<"/"<<spectra.size()<<" ("<<100*rejected/spectra.size()<<"%)"<<std::endl;
+	std::cout<<"rejected splines: "<<rejected<<"/"<<accepted<<" ("<<100*(double)rejected/(double)(accepted+rejected)<<"%)"<<std::endl;
 	if(rejected>0){
 		std::cout<<"cause: no peaks: "<<noComponents<<"/"<<rejected<<" ("<<100*noComponents/rejected<<"%)"<<std::endl;
 		std::cout<<"cause: empty spline: "<<emptySplines<<"/"<<rejected<<" ("<<100*emptySplines/rejected<<"%)"<<std::endl;
@@ -264,7 +275,7 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 //problems: FULL output = samples*partials
 //phase + magnitude
 //TODO: maybe reduce samples by excluding places of linear phase? and linear mag? then i will need to include time? possibly useless? only zero magnitude?
-std::vector<std::vector<Diginstrument::Component<double>>> AnalyzerPlugin::subtractiveAnalysis(std::vector<double> & signal, unsigned int sampleRate, vector<pair<string, double>> coordinates)
+std::vector<std::vector<Diginstrument::Component<double>>> AnalyzerPlugin::subtractiveAnalysis(std::vector<double> & signal, unsigned int sampleRate, vector<pair<string, double>> coordinates, double cutoff)
 {
 	//tmp: FFT visualization
 	QImage colorBlue = QImage(2, 2, QImage::Format_RGB32);
@@ -275,8 +286,7 @@ std::vector<std::vector<Diginstrument::Component<double>>> AnalyzerPlugin::subtr
 	Diginstrument::FFT fft(signal.size());
 	const auto mags = fft(signal, m_sampleBuffer.sampleRate());
 	//find peaks in FFT, indicating areas of significance
-	//TODO: make parameters variable
-	const auto maxima = Extrema::Differential::maxima(mags.begin(), mags.end(), 0.002, 2);
+	const auto maxima = Extrema::Differential::maxima(mags.begin(), mags.end(), [cutoff](double fr)->double{ return cutoff/fr; }, 2);
 	//TMP: visualize found frequencies
 	for(auto p : maxima)
 	{

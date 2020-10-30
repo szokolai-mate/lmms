@@ -71,7 +71,7 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 	}
 	auto partials = interpolator.getPartials(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
 	coordinates.emplace_back(startTime);
-	auto spectrum = interpolator.getSpectrum(coordinates);
+	//auto spectrum = interpolator.getSpectrum(coordinates);
 	vector<float> audioData = this->synth.playNote(partials, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
 
 	/*tmp: stereo*/

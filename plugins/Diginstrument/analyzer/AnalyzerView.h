@@ -33,6 +33,8 @@ class AnalyzerView : public ToolPluginView
     QPushButton * m_openVisualizationButton;
     QPushButton * m_addDimensionButton;
     QLineEdit * m_nameField;
+    QLineEdit * m_partialCutoffField;
+    QLineEdit * m_residualCutoffField;
     QList<DimensionField*> dimensionFields;
     QWidget * dimensionFieldsContainer;
     QLineEdit * m_fileNameField;

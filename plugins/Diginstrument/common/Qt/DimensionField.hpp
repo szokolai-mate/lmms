@@ -35,9 +35,13 @@ class DimensionField : public QWidget
       QVBoxLayout * rightLayout = new QVBoxLayout;
       QHBoxLayout * layout = new QHBoxLayout;
       this->setLayout(layout);
+      leftLayout->addWidget(new QLabel("Label"));
       leftLayout->addWidget(label);
+      leftLayout->addWidget(new QLabel("Current value"));
       leftLayout->addWidget(value);
+      rightLayout->addWidget(new QLabel("minimum value"));
       rightLayout->addWidget(minValue);
+      rightLayout->addWidget(new QLabel("maximum value"));
       rightLayout->addWidget(maxValue);
       QWidget * leftContainer = new QWidget;
       QWidget * rightContainer = new QWidget;
@@ -46,6 +50,7 @@ class DimensionField : public QWidget
       layout->addWidget(leftContainer);
       layout->addWidget(rightContainer);
       layout->addWidget(deleteButton);
+      deleteButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
       layout->setMargin(0);
       layout->setSpacing(0);
     }

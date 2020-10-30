@@ -5,9 +5,11 @@ AnalyzerView::AnalyzerView(ToolPlugin * _parent ) :
 {
     /*TODO */
     m_nameField = new QLineEdit;
-    m_openAudioFileButton = new QPushButton( "Open file", this);
+    m_partialCutoffField = new QLineEdit;
+    m_residualCutoffField = new QLineEdit;
+    m_openAudioFileButton = new QPushButton( "Add note from file with current coordinates", this);
     m_openAudioFileButton->setCursor( QCursor( Qt::PointingHandCursor ) );
-    m_openVisualizationButton = new QPushButton( "Show instrument visualization");
+    m_openVisualizationButton = new QPushButton( "Show instrument visualization (broken)");
     m_openVisualizationButton->setCursor( QCursor( Qt::PointingHandCursor ) );
     m_addDimensionButton = new QPushButton( "Add dimension");
     m_addDimensionButton->setCursor( QCursor( Qt::PointingHandCursor ) );
@@ -27,7 +29,8 @@ AnalyzerView::AnalyzerView(ToolPlugin * _parent ) :
     infoContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     QGridLayout * infoLayout = new QGridLayout;
     infoContainer->setLayout(infoLayout);
-    infoLayout->addWidget(m_nameField, 0, 0, 1, 1);
+    infoLayout->addWidget(new QLabel("Instrument name"), 0, 0, 1, 1);
+    infoLayout->addWidget(m_nameField, 1, 0, 1, 1);
     infoLayout->addWidget(m_openAudioFileButton, 0, 1, 1, 2);
     infoLayout->addWidget(m_openVisualizationButton, 1, 1, 1, 2);
 
@@ -39,8 +42,28 @@ AnalyzerView::AnalyzerView(ToolPlugin * _parent ) :
     coordinateLayout->setAlignment(Qt::AlignTop);
     coordinateLayout->addWidget(m_addDimensionButton);
 
+    QWidget * parametersContainer = new QWidget;
+    parametersContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    QHBoxLayout * parametersLayout = new QHBoxLayout;
+    parametersContainer->setLayout(parametersLayout);
+    QWidget * partialParameterContainer = new QWidget;
+    partialParameterContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    QVBoxLayout * partialParameterLayout = new QVBoxLayout;
+    partialParameterContainer->setLayout(partialParameterLayout);
+    partialParameterLayout->addWidget(new QLabel("Partials cutoff: x/frequency"));
+    partialParameterLayout->addWidget(m_partialCutoffField);
+    QWidget * residualParameterContainer = new QWidget;
+    residualParameterContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    QVBoxLayout * residualParameterLayout = new QVBoxLayout;
+    residualParameterContainer->setLayout(residualParameterLayout);
+    residualParameterLayout->addWidget(new QLabel("Residual cutoff: x"));
+    residualParameterLayout->addWidget(m_residualCutoffField);
+    parametersLayout->addWidget(partialParameterContainer);
+    parametersLayout->addWidget(residualParameterContainer);
+
     QVBoxLayout * layout = new QVBoxLayout;
     layout->addWidget(infoContainer);
+    layout->addWidget(parametersContainer);
     layout->addWidget(dimensionFieldsContainer);
     layout->addWidget(m_saveToFileButton);
     this->setLayout(layout);
@@ -70,7 +93,7 @@ void AnalyzerView::openAudioFile( void )
       const auto pair = p->getCoordinate();
       if(!pair.first.empty()) coordinates.push_back(pair);
     }
-    std::string res = castModel<AnalyzerPlugin>()->analyzeSample( af , coordinates);
+    std::string res = castModel<AnalyzerPlugin>()->analyzeSample( af , coordinates, m_partialCutoffField->text().toDouble(), m_residualCutoffField->text().toDouble());
 		//Engine::getSong()->setModified();
 		//m_waveView->updateSampleRange();
 	}

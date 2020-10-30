@@ -149,7 +149,7 @@ PiecewiseBSpline<T, D> SpectrumFitter<T, D>::peakFit(const std::vector<std::vect
     auto it = maxima.begin();
 
     //begin - first peak
-    points = std::vector<std::vector<T>>(spectrum.begin(), spectrum.begin()+(maxima.begin()->index)+1);
+    points = std::vector<std::vector<T>>(spectrum.begin(), spectrum.begin()+(maxima.begin()->index));
     //add interpolated first peak
     //TMP: FIXME: if there are not enough points for cubic lagrange, just do linear
     if(it->index==0 || (it)->index+2 > spectrum.size()-1)
@@ -184,7 +184,7 @@ PiecewiseBSpline<T, D> SpectrumFitter<T, D>::peakFit(const std::vector<std::vect
             }
         }
         //add inbetween points
-        for(int i = it->index+1; i<=(it+1)->index; i++)
+        for(int i = it->index+1; i<(it+1)->index; i++)
         {
             points.emplace_back(spectrum[i]);
         }

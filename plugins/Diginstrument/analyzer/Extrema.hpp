@@ -158,13 +158,13 @@ public:
     }
 
     template <class Iterator>
-    static std::vector<CriticalPoint> maxima(Iterator begin, Iterator end, double minProminence = 0, double minDistance = 0)
+    static std::vector<CriticalPoint> maxima(Iterator begin, Iterator end, std::function<double(double)> prominenceFunction, double minDistance = 0)
     {
         std::vector<std::pair<double, double>> d1 = makeFirstDerivative(begin, end);
         std::vector<CriticalPoint> res;
         for(int i = 0; i<d1.size()-1; i++)
         {
-            if(d1[i].second > 0 && d1[i+1].second < 0 && abs(d1[i].second-d1[i+1].second) > minProminence)
+            if(d1[i].second > 0 && d1[i+1].second < 0 && abs(d1[i].second-d1[i+1].second) > (prominenceFunction(d1[i+1].first)))
             {
                 //local maximum
                 const double x = Intersection::X<double>(d1[i].first, d1[i].second, d1[i+1].first, d1[i+1].second);
