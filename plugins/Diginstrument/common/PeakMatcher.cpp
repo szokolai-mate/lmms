@@ -3,23 +3,11 @@
 //tmp
 #include <iostream>
 
-double Diginstrument::PeakMatcher::calculateDistance(const Diginstrument::Component<double> &left, const Diginstrument::Component<double> &right)
-{
-    //TODO: good scoring schema
-    //sejtés: amp should carry more weight- NO
-    const double ampDiff = std::fabs(left.amplitude - right.amplitude);
-    const double freqDiff = std::fabs(left.frequency - right.frequency);
-    //tmp
-    const double score = ampDiff * freqDiff / (left.amplitude + right.amplitude);
-    //TODO: if both of them have very low energy, then disregard?
-    //TODO: what would that do to dieing/new partials?
-    //tmp
-    //std::cout<<"("<<left.frequency<<", "<<left.amplitude<<"); ("<<right.frequency<<", "<<right.amplitude<<") - "<<score<<std::endl;
-
-    return score;
-}
-
-std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::makeAllSortedMatches(const std::vector<Diginstrument::Component<double>> & leftComponents, const std::vector<Diginstrument::Component<double>> & rightComponents)
+std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::makeAllSortedMatches(
+    const std::vector<Diginstrument::Component<double>> & leftComponents,
+    const std::vector<Diginstrument::Component<double>> & rightComponents,
+    std::function<double(const Diginstrument::Component<double>&, const Diginstrument::Component<double>&)> distanceFunction
+    )
 {
     //TODO: include a limit?
     std::vector<Match> allMatches;
@@ -29,7 +17,7 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::makeAllSortedMatch
     {
         for(int rIndex = 0; rIndex<rightComponents.size(); rIndex++)
         {   
-            const double distance = calculateDistance(leftComponents[lIndex], rightComponents[rIndex]);
+            const double distance = distanceFunction(leftComponents[lIndex], rightComponents[rIndex]);
             allMatches.emplace_back(lIndex, rIndex, distance);
         }
     }
@@ -38,7 +26,11 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::makeAllSortedMatch
     return allMatches;
 }
 
-std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(const std::vector<Diginstrument::Component<double>> & leftComponents, const std::vector<Diginstrument::Component<double>> & rightComponents)
+std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(
+    const std::vector<Diginstrument::Component<double>> & leftComponents,
+    const std::vector<Diginstrument::Component<double>> & rightComponents,
+    std::function<double(const Diginstrument::Component<double>&, const Diginstrument::Component<double>&)> distanceFunction
+    )
 {
     //TODO: can the cycle abort if we find a low number? or if the number is higher than the previous?
     //maybe: frequency diff. limit?
@@ -49,7 +41,7 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(const s
     //->they slide onto eachother: they change order ... maybe this can even work?
     //CONCLUSION: this in not a bug, but a feature. need to make it work (if the spline is too small, remove it)
     
-    auto allMatches = makeAllSortedMatches(leftComponents, rightComponents);
+    auto allMatches = makeAllSortedMatches(leftComponents, rightComponents, distanceFunction);
 
     std::set<unsigned int> chosenLeftPeaks;
     std::set<unsigned int> chosenRightPeaks;
@@ -78,9 +70,12 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(const s
 std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(const std::vector<Diginstrument::Component<double>> & leftComponents,
                                          const std::vector<Diginstrument::Component<double>> & rightComponents,
                                          std::vector<unsigned int> & leftUnmatched,
-                                         std::vector<unsigned int> & rightUnmatched)
+                                         std::vector<unsigned int> & rightUnmatched,
+                                         std::function<double(const Diginstrument::Component<double>&, const Diginstrument::Component<double>&)> distanceFunction,
+                                         double threshold
+)
 {
-    auto allMatches = makeAllSortedMatches(leftComponents, rightComponents);
+    auto allMatches = makeAllSortedMatches(leftComponents, rightComponents, distanceFunction);
     std::set<unsigned int> chosenLeftPeaks;
     std::set<unsigned int> chosenRightPeaks;
     std::set<unsigned int> unmatchedLeft;
@@ -100,8 +95,8 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(const s
     while( chosenLeftPeaks.size()!=leftComponents.size() && chosenRightPeaks.size()!=rightComponents.size() && i<allMatches.size())
     {
         const Match & match = allMatches[i];
-        //if neither peak was chosen already
-        if (chosenLeftPeaks.find(match.left) == chosenLeftPeaks.end() && chosenRightPeaks.find(match.right) == chosenRightPeaks.end())
+        //if neither peak was chosen already and the match reaches the threshold
+        if (match.distance<=threshold && chosenLeftPeaks.find(match.left) == chosenLeftPeaks.end() && chosenRightPeaks.find(match.right) == chosenRightPeaks.end())
         {
             //add the match and the peaks
             matches.push_back(match);

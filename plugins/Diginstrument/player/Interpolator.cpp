@@ -84,10 +84,20 @@ PartialSet<T> Diginstrument::Interpolator<T, S>::interpolatePartialSet(const Par
     }
     if(shifting && !right.empty() && !left.empty())
     {
-        matches = PeakMatcher::matchPeaks(left.getMatchables(), right.getMatchables(), unmatchedLeft, unmatchedRight);
+        //get probable fundamental frequency ratio
+        //tmp: just based on label
+        const double componentRatio = leftLabel/rightLabel;
+        const double maxRatioDeviance = 0.02;
+
+        matches = PeakMatcher::matchPeaks(left.getMatchables(), right.getMatchables(), unmatchedLeft, unmatchedRight,
+            [componentRatio, maxRatioDeviance](const Diginstrument::Component<T> & left, const Diginstrument::Component<T>& right)->double
+            {
+                return abs((left.frequency/right.frequency)-componentRatio);
+            },
+            maxRatioDeviance
+        );
     }
 
-    //tmp: here
     //calculate shifting metrics
     const T rightWeight = (target-leftLabel) / (rightLabel - leftLabel);
     const T leftWeight = 1.0f - rightWeight;
@@ -105,13 +115,31 @@ PartialSet<T> Diginstrument::Interpolator<T, S>::interpolatePartialSet(const Par
             const Diginstrument::Component<T> rightComponent = right.get()[match.right][i];
             //TMP: simple linear interpolation and avg amp
             //TODO: frequency! sliding? what?!
-            partial.emplace_back(/*tmp*/ target ,
+            partial.emplace_back(leftComponent.frequency*leftWeight+rightComponent.frequency*rightWeight ,
              (leftComponent.phase*leftWeight+rightComponent.phase*rightWeight),
              (leftComponent.amplitude*leftWeight+rightComponent.amplitude*rightWeight)
             );
         }
         res.add(std::move(partial));
     }
+    //tmp: no unmatched
+    /*const double leftRatio = target/leftLabel;
+    for(int j = std::min(left.get().size(), right.get().size()); j<left.get().size(); j++)
+    {
+        std::vector<Diginstrument::Component<T>> partial;
+        partial.reserve(left.get()[j].size());
+        for(int i = 0; i<left.get()[j].size(); i++)
+        { 
+            const Diginstrument::Component<T> leftComponent = left.get()[j][i];
+            //TMP: simple linear interpolation and avg amp
+            //TODO: frequency! sliding? what?!
+            partial.emplace_back(leftComponent.frequency*leftRatio,
+             (leftComponent.phase*leftRatio),
+             (leftComponent.amplitude*leftWeight)
+            );
+        }
+        res.add(std::move(partial));
+    }*/
     return res;
 }
 
@@ -151,7 +179,16 @@ S Diginstrument::Interpolator<T, S>::interpolateSpectra(const S &left, const S &
     }
     if(shifting && !right.empty() && !left.empty())
     {
-        matches = PeakMatcher::matchPeaks(left.getMatchables(), right.getMatchables(), unmatchedLeft, unmatchedRight);
+        matches = PeakMatcher::matchPeaks(left.getMatchables(), right.getMatchables(), unmatchedLeft, unmatchedRight,
+        [](const Diginstrument::Component<double> &left, const Diginstrument::Component<double> &right)->double
+        {
+            //TODO: better distance function
+            const double ampDiff = std::fabs(left.amplitude - right.amplitude);
+            const double freqDiff = std::fabs(left.frequency - right.frequency);
+            const double score = ampDiff * freqDiff / (left.amplitude + right.amplitude);
+            return score;
+        }
+        );
     }
 
     return constructSpectrum(left, right, target, leftLabel, rightLabel, matches, unmatchedLeft, unmatchedRight);

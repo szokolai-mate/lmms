@@ -286,7 +286,8 @@ std::vector<std::vector<Diginstrument::Component<double>>> AnalyzerPlugin::subtr
 	Diginstrument::FFT fft(signal.size());
 	const auto mags = fft(signal, m_sampleBuffer.sampleRate());
 	//find peaks in FFT, indicating areas of significance
-	const auto maxima = Extrema::Differential::maxima(mags.begin(), mags.end(), [cutoff](double fr)->double{ return cutoff/fr; }, 2);
+	//TMP: debug: higher min distance
+	const auto maxima = Extrema::Differential::maxima(mags.begin(), mags.end(), [cutoff](double fr)->double{ return cutoff/fr; }, /*TMP; 2*/ 15);
 	//TMP: visualize found frequencies
 	for(auto p : maxima)
 	{

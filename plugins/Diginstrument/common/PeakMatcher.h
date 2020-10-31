@@ -22,15 +22,21 @@ struct Match
 class PeakMatcher
 {
 private:
-    static double calculateDistance(const Diginstrument::Component<double> &left, const Diginstrument::Component<double> &right);
     static std::vector<Match> makeAllSortedMatches(const std::vector<Diginstrument::Component<double>> & leftComponents,
-                                             const std::vector<Diginstrument::Component<double>> & rightComponents);
+                                             const std::vector<Diginstrument::Component<double>> & rightComponents,
+                                             std::function<double(const Diginstrument::Component<double>&, const Diginstrument::Component<double>&)> distanceFunction
+                                            );
 public:
     static std::vector<Match> matchPeaks(const std::vector<Diginstrument::Component<double>> & leftComponents,
-                                         const std::vector<Diginstrument::Component<double>> & rightComponents);
+                                         const std::vector<Diginstrument::Component<double>> & rightComponents,
+                                         std::function<double(const Diginstrument::Component<double>&, const Diginstrument::Component<double>&)> distanceFunction
+                                         );
     static std::vector<Match> matchPeaks(const std::vector<Diginstrument::Component<double>> & leftComponents,
                                          const std::vector<Diginstrument::Component<double>> & rightComponents,
                                          std::vector<unsigned int> & leftUnmatched,
-                                         std::vector<unsigned int> & rightUnmatched);
+                                         std::vector<unsigned int> & rightUnmatched,
+                                         std::function<double(const Diginstrument::Component<double>&, const Diginstrument::Component<double>&)> distanceFunction,
+                                         double threshold = 0
+                                         );
 };
 } // namespace Diginstrument

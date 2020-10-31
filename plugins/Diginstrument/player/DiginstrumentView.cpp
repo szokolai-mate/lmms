@@ -91,6 +91,7 @@ void DiginstrumentView::updateVisualizationData(float minTime, float maxTime, fl
 												QVector3D(0.01f, 0.01f, 0.01f),
 												QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
 												palette[j]));
+    j++;
   }
 }
 
