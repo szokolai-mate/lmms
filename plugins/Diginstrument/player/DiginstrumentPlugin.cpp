@@ -62,7 +62,7 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 	const double startTime = noteHandle->totalFramesPlayed() / (double)Engine::mixer()->processingSampleRate();
 	vector<double> coordinates = {noteHandle->frequency()};
 	//tmp:
-	cout<<"fr: "<<coordinates.front()<<endl;
+	//cout<<"fr: "<<coordinates.front()<<endl;
 	//TODO: first coordinate is freq, might not be correct?
 	coordinates.reserve(this->coordinates.size()+2);
 	for(auto c : this->coordinates)
@@ -125,7 +125,7 @@ bool DiginstrumentPlugin::loadInstrumentFile()
 		file.close();
 		//TODO: separate into loading from file and loading saved
 		//TODO: catch?
-		instrument = Diginstrument::Instrument<SplineSpectrum<double, 4>, double>::fromJSON(json::parse(arr.toStdString()));
+		instrument = Diginstrument::Instrument<SplineSpectrum<double, 4>, double>::fromJSON(ordered_json::parse(arr.toStdString()));
 		//tmp:
 		interpolator.clear();
 		interpolator.addSpectra(instrument.getSpectra());

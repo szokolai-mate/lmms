@@ -7,6 +7,8 @@ AnalyzerView::AnalyzerView(ToolPlugin * _parent ) :
     m_nameField = new QLineEdit;
     m_partialCutoffField = new QLineEdit;
     m_residualCutoffField = new QLineEdit;
+    m_partialAbsCutoffField = new QLineEdit;
+    m_partialMinDistanceField = new QLineEdit;
     m_openAudioFileButton = new QPushButton( "Add note from file with current coordinates", this);
     m_openAudioFileButton->setCursor( QCursor( Qt::PointingHandCursor ) );
     m_openVisualizationButton = new QPushButton( "Show instrument visualization (broken)");
@@ -50,13 +52,17 @@ AnalyzerView::AnalyzerView(ToolPlugin * _parent ) :
     partialParameterContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     QVBoxLayout * partialParameterLayout = new QVBoxLayout;
     partialParameterContainer->setLayout(partialParameterLayout);
-    partialParameterLayout->addWidget(new QLabel("Partials cutoff: x/frequency"));
+    partialParameterLayout->addWidget(new QLabel("Partials min. prominence"));
     partialParameterLayout->addWidget(m_partialCutoffField);
+    partialParameterLayout->addWidget(new QLabel("Partials height cutoff"));
+    partialParameterLayout->addWidget(m_partialAbsCutoffField);
+    partialParameterLayout->addWidget(new QLabel("Partials min. frequency distance"));
+    partialParameterLayout->addWidget(m_partialMinDistanceField);
     QWidget * residualParameterContainer = new QWidget;
     residualParameterContainer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     QVBoxLayout * residualParameterLayout = new QVBoxLayout;
     residualParameterContainer->setLayout(residualParameterLayout);
-    residualParameterLayout->addWidget(new QLabel("Residual cutoff: x"));
+    residualParameterLayout->addWidget(new QLabel("Residual min. prominence"));
     residualParameterLayout->addWidget(m_residualCutoffField);
     parametersLayout->addWidget(partialParameterContainer);
     parametersLayout->addWidget(residualParameterContainer);
@@ -93,7 +99,7 @@ void AnalyzerView::openAudioFile( void )
       const auto pair = p->getCoordinate();
       if(!pair.first.empty()) coordinates.push_back(pair);
     }
-    std::string res = castModel<AnalyzerPlugin>()->analyzeSample( af , coordinates, m_partialCutoffField->text().toDouble(), m_residualCutoffField->text().toDouble());
+    std::string res = castModel<AnalyzerPlugin>()->analyzeSample( af , coordinates, m_partialCutoffField->text().toDouble(), m_partialAbsCutoffField->text().toDouble(), m_partialMinDistanceField->text().toDouble(), m_residualCutoffField->text().toDouble());
 		//Engine::getSong()->setModified();
 		//m_waveView->updateSampleRange();
 	}

@@ -27,7 +27,7 @@
 #include <iostream>
 #include <QtDataVisualization>
 
-using json = nlohmann::json;
+using ordered_json = nlohmann::ordered_json;
 
 //TMP
 class InstrumentData
@@ -37,7 +37,7 @@ class InstrumentData
     std::string name;
     std::string type;
     std::vector<Diginstrument::Dimension> dimensions;
-    json _json;
+    ordered_json _json;
 };
 
 class DiginstrumentPlugin : public Instrument

@@ -46,7 +46,7 @@ class Instrument
         return Diginstrument::JSONConverter::toJSON(name, dimensions, spectra, partialSets).dump(spaces);
     }
 
-    static Diginstrument::Instrument<S, T> fromJSON(json object)
+    static Diginstrument::Instrument<S, T> fromJSON(ordered_json object)
     {
         Diginstrument::Instrument<S, T> res;
         res.name = object["name"];

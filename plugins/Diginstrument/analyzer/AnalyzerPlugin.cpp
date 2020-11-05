@@ -52,7 +52,7 @@ QString AnalyzerPlugin::fullDisplayName() const
 }
 
 //TMP
-std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pair<string, double>> coordinates, double partialCutoffParameter, double residualCutoffParameter)
+std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pair<string, double>> coordinates, double partialCutoffParameter,  double partialHeightCutoffParameter, double partialMinDistance, double residualCutoffParameter)
 {
 	//TMP: keep for visualization
 	spectra.clear();
@@ -68,7 +68,7 @@ std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pai
 	//tmp:visualization
 	visualization = new Diginstrument::InstrumentVisualizationWindow(this);
 
-	const auto partials = subtractiveAnalysis(sample, m_sampleBuffer.sampleRate(), coordinates, partialCutoffParameter);
+	const auto partials = subtractiveAnalysis(sample, m_sampleBuffer.sampleRate(), coordinates, partialCutoffParameter, partialHeightCutoffParameter, partialMinDistance);
 	analyze(sample, partials, coordinates, residualCutoffParameter);
 	//TMP: some error stats
 	auto absRes = sample;
@@ -132,7 +132,7 @@ void AnalyzerPlugin::writeInstrumentToFile(std::string filename)
 	}
 }
 
-void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std::vector<Diginstrument::Component<double>>> partials, vector<pair<string, double>> coordinates, double cutoff)
+void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std::vector<Diginstrument::Component<double>>> partials, vector<pair<string, double>> coordinates, double minProminence)
 {
 	//do CWT
 	const int level = 18;
@@ -193,7 +193,7 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 		//const auto peaks = Diginstrument::PeakApproximation(Extrema::Differential::intermixed(rawSpectrum.begin(), rawSpectrum.end()));
 		//tmp: trying to fix weird interpolation problem, just use maxima for now, as hidden peaks are still primitive
 		//maybe: minprominence here should be independent of freq?
-		const auto peaks = Extrema::Differential::maxima(rawSpectrum.begin(), rawSpectrum.end(), [cutoff](double fr)->double{return cutoff;});
+		const auto peaks = Extrema::Differential::maxima(rawSpectrum.begin(), rawSpectrum.end(), [minProminence](double fr)->double{return minProminence;});
 		//const auto currentPartials = partials[i];
 		//TODO: is this the best place to convert to amp?
 		//after determining peaks, convert magnitude to amplitude
@@ -275,11 +275,11 @@ void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std
 //problems: FULL output = samples*partials
 //phase + magnitude
 //TODO: maybe reduce samples by excluding places of linear phase? and linear mag? then i will need to include time? possibly useless? only zero magnitude?
-std::vector<std::vector<Diginstrument::Component<double>>> AnalyzerPlugin::subtractiveAnalysis(std::vector<double> & signal, unsigned int sampleRate, vector<pair<string, double>> coordinates, double cutoff)
+std::vector<std::vector<Diginstrument::Component<double>>> AnalyzerPlugin::subtractiveAnalysis(std::vector<double> & signal, unsigned int sampleRate, vector<pair<string, double>> coordinates, double minProminence, double heightThreshold, double minDistance)
 {
 	//tmp: FFT visualization
-	QImage colorBlue = QImage(2, 2, QImage::Format_RGB32);
-	colorBlue.fill(Qt::black);
+	QImage colorBlack = QImage(2, 2, QImage::Format_RGB32);
+	colorBlack.fill(Qt::black);
 
 	//TODO: avg energy to detect broad-changing frequencies
 	//calculate FFT magnitudes of the signal
@@ -287,7 +287,7 @@ std::vector<std::vector<Diginstrument::Component<double>>> AnalyzerPlugin::subtr
 	const auto mags = fft(signal, m_sampleBuffer.sampleRate());
 	//find peaks in FFT, indicating areas of significance
 	//TMP: debug: higher min distance
-	const auto maxima = Extrema::Differential::maxima(mags.begin(), mags.end(), [cutoff](double fr)->double{ return cutoff/fr; }, /*TMP; 2*/ 15);
+	const auto maxima = Extrema::Differential::maxima(mags.begin(), mags.end(), [minProminence](double fr)->double{ return minProminence; }, heightThreshold, minDistance);
 	//TMP: visualize found frequencies
 	for(auto p : maxima)
 	{
@@ -298,7 +298,7 @@ std::vector<std::vector<Diginstrument::Component<double>>> AnalyzerPlugin::subtr
 												QVector3D(p.x, Y, 0),
 												QVector3D(0.025f, 0.025f, 0.025f),
 												QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
-												colorBlue));
+												colorBlack));
 	}
 
 	vector<vector<double>> phases;

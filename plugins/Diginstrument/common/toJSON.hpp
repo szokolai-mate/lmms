@@ -4,16 +4,16 @@
 #include "SplineSpectrum.hpp"
 #include "Dimension.h"
 
-using json = nlohmann::json;
+using ordered_json = nlohmann::ordered_json;
 
 namespace Diginstrument
 {
 class JSONConverter
 {
   public:
-    static json toJSON(const SplineSpectrum<double, 4> & spline)
+    static ordered_json toJSON(const SplineSpectrum<double, 4> & spline)
     {
-        json res;
+        ordered_json res;
 
         for(auto & c : spline.getLabels())
         {
@@ -21,10 +21,10 @@ class JSONConverter
         }
 
         auto splineCopy = spline;
-        json pieces = json::array();
+        ordered_json pieces = ordered_json::array();
         for(auto & piece : splineCopy.getSpline().getPieces())
         {
-            json pieceJSON;
+            ordered_json pieceJSON;
             pieceJSON["control_points"] = piece.getSpline().getControlPoints();
             pieceJSON["knot_vector"] = piece.getSpline().getKnotVector();
             pieces.push_back(pieceJSON);
@@ -33,9 +33,9 @@ class JSONConverter
         return res;
     }
 
-    static json toJSON(const PartialSet<double> & partialSet)
+    static ordered_json toJSON(const PartialSet<double> & partialSet)
     {
-        json res;
+        ordered_json res;
         for(auto & c : partialSet.getLabels())
         {
             res[c.first] = c.second;
@@ -43,10 +43,10 @@ class JSONConverter
 
         res["sample_rate"] = partialSet.getSampleRate();
 
-        res["partials"] = json::array();
+        res["partials"] = ordered_json::array();
         for(const auto & p : partialSet.get())
         {
-            json partialObject;
+            ordered_json partialObject;
             vector<double> phases, amps;
             partialObject["frequency"] = p.front().frequency;
             phases.reserve(p.size());
@@ -63,9 +63,9 @@ class JSONConverter
         return res;
     }
 
-    static json toJSON(const Diginstrument::Dimension & dimension)
+    static ordered_json toJSON(const Diginstrument::Dimension & dimension)
     {
-        json res;
+        ordered_json res;
         res["label"] = dimension.name;
         res["min"] = dimension.min;
         res["max"] = dimension.max;
@@ -74,28 +74,28 @@ class JSONConverter
         return res;
     }
 
-    static json toJSON(
+    static ordered_json toJSON(
         std::string name,
         const std::vector<Diginstrument::Dimension> & dimensions,
         const std::vector<SplineSpectrum<double, 4>> & spectra,
         const std::vector<PartialSet<double>> & partials)
     {
         //TODO: "coordinates" not included, as they are not used anywhere anyway
-        json res;
+        ordered_json res;
 
-        res["spectra"] = json::array();
+        res["spectra"] = ordered_json::array();
         for(const auto & s : spectra)
         {
            res["spectra"].push_back(toJSON(s));
         }
 
-        res["dimensions"] = json::array();
+        res["dimensions"] = ordered_json::array();
         for(const auto & d : dimensions)
         {
            res["dimensions"].push_back(toJSON(d));
         }
 
-        res["partial_sets"] = json::array();
+        res["partial_sets"] = ordered_json::array();
         for(const auto & p : partials)
         {
            res["partial_sets"].push_back(toJSON(p));
@@ -107,7 +107,7 @@ class JSONConverter
         return res;
     }
 
-    static SplineSpectrum<double, 4> splineFromJSON(json object)
+    static SplineSpectrum<double, 4> splineFromJSON(ordered_json object)
     {
         PiecewiseBSpline<double, 4> piecewise;
         vector<pair<string, double>> labels;
@@ -125,7 +125,7 @@ class JSONConverter
         return SplineSpectrum<double, 4>(std::move(piecewise), std::move(labels));
     }
 
-    static PartialSet<double> partialSetFromJSON(json object)
+    static PartialSet<double> partialSetFromJSON(ordered_json object)
     {
         vector<vector<Diginstrument::Component<double>>> partials;
         vector<pair<string, double>> labels;
@@ -146,7 +146,7 @@ class JSONConverter
         return PartialSet<double>(std::move(partials), std::move(labels), object["sample_rate"]);
     }
 
-    static Diginstrument::Dimension dimensionFromJSON(json object)
+    static Diginstrument::Dimension dimensionFromJSON(ordered_json object)
     {
         if(!object["default"].is_null()) return Diginstrument::Dimension(object["label"], object["min"], object["max"], object["shifting"]);
         else return Diginstrument::Dimension(object["label"], object["min"], object["max"], object["shifting"], object["default"]);

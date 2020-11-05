@@ -84,9 +84,9 @@ PartialSet<T> Diginstrument::Interpolator<T, S>::interpolatePartialSet(const Par
     }
     if(shifting && !right.empty() && !left.empty())
     {
-        //get probable fundamental frequency ratio
-        //tmp: just based on label
-        const double componentRatio = leftLabel/rightLabel;
+        //TODO: actually get fundamental frequency
+        //fundamental frequency ratio
+        const double componentRatio = left.getMatchables().front().frequency/right.getMatchables().front().frequency;
         const double maxRatioDeviance = 0.02;
 
         matches = PeakMatcher::matchPeaks(left.getMatchables(), right.getMatchables(), unmatchedLeft, unmatchedRight,
@@ -122,24 +122,43 @@ PartialSet<T> Diginstrument::Interpolator<T, S>::interpolatePartialSet(const Par
         }
         res.add(std::move(partial));
     }
-    //tmp: no unmatched
-    /*const double leftRatio = target/leftLabel;
-    for(int j = std::min(left.get().size(), right.get().size()); j<left.get().size(); j++)
+    const double leftRatio = target/leftLabel;
+    for(auto k : unmatchedLeft)
     {
         std::vector<Diginstrument::Component<T>> partial;
-        partial.reserve(left.get()[j].size());
-        for(int i = 0; i<left.get()[j].size(); i++)
+        partial.reserve(left.get()[k].size());
+        for(int i = 0; i<left.get()[k].size(); i++)
         { 
-            const Diginstrument::Component<T> leftComponent = left.get()[j][i];
-            //TMP: simple linear interpolation and avg amp
-            //TODO: frequency! sliding? what?!
-            partial.emplace_back(leftComponent.frequency*leftRatio,
-             (leftComponent.phase*leftRatio),
+            const Diginstrument::Component<T> leftComponent = left.get()[k][i];
+            partial.emplace_back(
+             //tmp: unmatched dont get shifted
+             leftComponent.frequency/**leftRatio*/,
+             leftComponent.phase/**leftRatio*/,
+             //amp uses weight!
              (leftComponent.amplitude*leftWeight)
             );
         }
         res.add(std::move(partial));
-    }*/
+    }
+
+    const double rightRatio = target/rightLabel;
+    for(auto k : unmatchedRight)
+    {
+        std::vector<Diginstrument::Component<T>> partial;
+        partial.reserve(right.get()[k].size());
+        for(int i = 0; i<right.get()[k].size(); i++)
+        { 
+            const Diginstrument::Component<T> rightComponent = right.get()[k][i];
+            partial.emplace_back(
+                //tmp: unmatched dont get shifted
+             rightComponent.frequency/**rightRatio*/,
+             (rightComponent.phase/**rightRatio*/),
+             //amp uses weight!
+             (rightComponent.amplitude*rightWeight)
+            );
+        }
+        res.add(std::move(partial));
+    }
     return res;
 }
 
