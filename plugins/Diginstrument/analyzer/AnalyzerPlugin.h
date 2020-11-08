@@ -37,8 +37,7 @@ class AnalyzerPlugin : public ToolPlugin
   Q_OBJECT
 public:
   //tmp: raw visualization
-  Diginstrument::InstrumentVisualizationWindow * visualization;
-  
+  Diginstrument::InstrumentVisualizationWindow *visualization;
 
   AnalyzerPlugin();
   virtual ~AnalyzerPlugin();
@@ -57,17 +56,27 @@ public:
 private:
   friend class AnalyzerView;
 
-  std::string analyzeSample(const QString &_audio_file, vector<pair<string, double>> coordinates, double partialMinProminence = 0, double partialHeightCutoffParameter = 0, double partialMinDistance = 0, double residualMinProminence = 0);
-  QtDataVisualization::QSurfaceDataArray * getSurfaceData(double minTime, double maxTime, double minFreq, double maxFreq, int timeSamples, int freqSamples);
+  std::string analyzeSample(const QString &_audio_file,
+                            vector<pair<string, float>> coordinates,
+                            double partialMinProminence = 0,
+                            double partialHeightCutoffParameter = 0,
+                            double partialMinDistance = 0,
+                            double residualMinProminence = 0);
+  QtDataVisualization::QSurfaceDataArray *getSurfaceData(double minTime, double maxTime, double minFreq, double maxFreq, int timeSamples, int freqSamples);
 
   typedef SampleBuffer::handleState handleState;
   SampleBuffer m_sampleBuffer;
-  Diginstrument::Instrument<SplineSpectrum<double,4>, double> inst;
-  //TMP: keep for visualization
-  std::vector<SplineSpectrum<double,4>> spectra;
+  Diginstrument::Instrument<float> inst;
+  
+  std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>>> residualAnalysis(const std::vector<double> &signal,
+                        unsigned int sampleRate,
+                        double minProminence = 0);
 
-  void analyze(const std::vector<double> & signal, std::vector<std::vector<Diginstrument::Component<double>>> partials, vector<pair<string, double>> coordinates, double minProminence = 0);
-  std::vector<std::vector<Diginstrument::Component<double>>> subtractiveAnalysis(std::vector<double> & signal, unsigned int sampleRate, vector<pair<string, double>> coordinates, double minProminence = 0, double heightThreshold = 0, double minDistance = 0);
+  std::vector<std::vector<Diginstrument::Component<float>>> subtractiveAnalysis(std::vector<double> &signal,
+                                                                                 unsigned int sampleRate,
+                                                                                 double minProminence = 0,
+                                                                                 double heightThreshold = 0,
+                                                                                 double minDistance = 0);
 
 private slots:
   //void sampleRateChanged();

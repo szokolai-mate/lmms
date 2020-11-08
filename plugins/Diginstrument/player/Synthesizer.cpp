@@ -7,13 +7,13 @@
 //TODO: spline synthesis
 //TODO: how to deal with quality?
 
-//tmp
-#include <iostream>
+template <typename T>
+unsigned int Diginstrument::Synthesizer<T>::outSampleRate = DEFAULT_SAMPLE_RATE;
+template <typename T>
+std::vector<T> Diginstrument::Synthesizer<T>::sinetable(0);
 
-unsigned int Diginstrument::Synthesizer::outSampleRate = DEFAULT_SAMPLE_RATE;
-std::vector<float> Diginstrument::Synthesizer::sinetable(0);
-
-std::vector<float> Diginstrument::Synthesizer::playNote(std::vector<Diginstrument::Component<double>> components, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
+template <typename T>
+std::vector<float> Diginstrument::Synthesizer<T>::playNote(std::vector<Diginstrument::Component<T>> components, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
 {
     std::vector<float> res(frames, 0);
     //tmp
@@ -42,12 +42,11 @@ std::vector<float> Diginstrument::Synthesizer::playNote(std::vector<Diginstrumen
     return res;
 }
 
-std::vector<float> Diginstrument::Synthesizer::playNote(const PartialSet<double> & slice, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
+template <typename T>
+std::vector<float> Diginstrument::Synthesizer<T>::playNote(const PartialSet<T> & slice, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
 {
-    //TODO
+    //TODO: maybe merge?
     std::vector<float> res(frames, 0);
-    //tmp: debug
-    std::cout<<"partials: "<<slice.get().size()<<std::endl;
     for(const auto & partial : slice.get())
     {
         for(int i = 0; i<partial.size(); i++)
@@ -57,6 +56,21 @@ std::vector<float> Diginstrument::Synthesizer::playNote(const PartialSet<double>
     }
     return res;
 }
+
+template <typename T>
+std::vector<float> Diginstrument::Synthesizer<T>::playResidual(const Residual<T> & residual, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
+{
+    std::vector<float> res(frames, 0);
+    for(const auto & r : residual.get())
+    {
+        for(const auto & c : r.second)
+        {
+            res[r.first-offset] += cos(c.phase) * c.amplitude; 
+        }
+    }
+    return res;
+}
+
 
 
 //TODO: refactor spline synthesis
@@ -149,11 +163,12 @@ std::vector<float> Diginstrument::Synthesizer::playNote(const PartialSet<double>
 //     return res;
 // }
 
-Diginstrument::Synthesizer::Synthesizer() : bank(/*DEFAULT_OSCILLATORS*/)
+template <typename T>
+Diginstrument::Synthesizer<T>::Synthesizer() : bank(/*DEFAULT_OSCILLATORS*/)
 {
-    if (Diginstrument::Synthesizer::sinetable.size() <= 0)
+    if (Diginstrument::Synthesizer<T>::sinetable.size() <= 0)
     {
-        if (Diginstrument::Synthesizer::outSampleRate <= 0)
+        if (Diginstrument::Synthesizer<T>::outSampleRate <= 0)
         {
             setSampleRate(DEFAULT_SAMPLE_RATE);
         }
@@ -161,15 +176,17 @@ Diginstrument::Synthesizer::Synthesizer() : bank(/*DEFAULT_OSCILLATORS*/)
     }
 }
 
-void Diginstrument::Synthesizer::setSampleRate(const unsigned int outSampleRate)
+template <typename T>
+void Diginstrument::Synthesizer<T>::setSampleRate(const unsigned int outSampleRate)
 {
-    if (Diginstrument::Synthesizer::outSampleRate == outSampleRate)
+    if (Diginstrument::Synthesizer<T>::outSampleRate == outSampleRate)
         return;
-    Diginstrument::Synthesizer::outSampleRate = outSampleRate;
-    Diginstrument::Synthesizer::buildSinetable();
+    Diginstrument::Synthesizer<T>::outSampleRate = outSampleRate;
+    Diginstrument::Synthesizer<T>::buildSinetable();
 }
 
-void Diginstrument::Synthesizer::buildSinetable()
+template <typename T>
+void Diginstrument::Synthesizer<T>::buildSinetable()
 {
     unsigned int tableSize = /*TODO*/ 480000;
     std::vector<float> tmp(tableSize);
@@ -177,5 +194,7 @@ void Diginstrument::Synthesizer::buildSinetable()
     {
         tmp[i] = (float)cos(((double)i / (double)tableSize) * M_PI * 2.0 - M_PI);
     }
-    Diginstrument::Synthesizer::sinetable = tmp;
+    Diginstrument::Synthesizer<T>::sinetable = tmp;
 }
+
+template class Diginstrument::Synthesizer<float>;

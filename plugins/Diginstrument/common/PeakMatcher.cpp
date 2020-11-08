@@ -3,10 +3,12 @@
 //tmp
 #include <iostream>
 
-std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::makeAllSortedMatches(
-    const std::vector<Diginstrument::Component<double>> & leftComponents,
-    const std::vector<Diginstrument::Component<double>> & rightComponents,
-    std::function<double(const Diginstrument::Component<double>&, const Diginstrument::Component<double>&)> distanceFunction
+
+template <typename T>
+std::vector<Diginstrument::Match> Diginstrument::PeakMatcher<T>::makeAllSortedMatches(
+    const std::vector<Diginstrument::Component<T>> & leftComponents,
+    const std::vector<Diginstrument::Component<T>> & rightComponents,
+    std::function<double(const Diginstrument::Component<T>&, const Diginstrument::Component<T>&)> distanceFunction
     )
 {
     //TODO: include a limit?
@@ -26,10 +28,11 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::makeAllSortedMatch
     return allMatches;
 }
 
-std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(
-    const std::vector<Diginstrument::Component<double>> & leftComponents,
-    const std::vector<Diginstrument::Component<double>> & rightComponents,
-    std::function<double(const Diginstrument::Component<double>&, const Diginstrument::Component<double>&)> distanceFunction
+template <typename T>
+std::vector<Diginstrument::Match> Diginstrument::PeakMatcher<T>::matchPeaks(
+    const std::vector<Diginstrument::Component<T>> & leftComponents,
+    const std::vector<Diginstrument::Component<T>> & rightComponents,
+    std::function<double(const Diginstrument::Component<T>&, const Diginstrument::Component<T>&)> distanceFunction
     )
 {
     //TODO: can the cycle abort if we find a low number? or if the number is higher than the previous?
@@ -67,11 +70,12 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(
 }
 
 //TODO: refactor
-std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(const std::vector<Diginstrument::Component<double>> & leftComponents,
-                                         const std::vector<Diginstrument::Component<double>> & rightComponents,
+template <typename T>
+std::vector<Diginstrument::Match> Diginstrument::PeakMatcher<T>::matchPeaks(const std::vector<Diginstrument::Component<T>> & leftComponents,
+                                         const std::vector<Diginstrument::Component<T>> & rightComponents,
                                          std::vector<unsigned int> & leftUnmatched,
                                          std::vector<unsigned int> & rightUnmatched,
-                                         std::function<double(const Diginstrument::Component<double>&, const Diginstrument::Component<double>&)> distanceFunction,
+                                         std::function<double(const Diginstrument::Component<T>&, const Diginstrument::Component<T>&)> distanceFunction,
                                          double threshold
 )
 {
@@ -118,4 +122,7 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher::matchPeaks(const s
         rightUnmatched.push_back(std::move(unmatchedRight.extract(it++).value()));
     }
     return matches;
-}                                         
+}
+
+template class Diginstrument::PeakMatcher<float>;
+template class Diginstrument::PeakMatcher<double>;

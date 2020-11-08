@@ -1,29 +1,29 @@
 #pragma once
 
-#include "SplineSpectrum.hpp"
+#include "Residual.hpp"
 #include "PartialSet.hpp"
 #include "toJSON.hpp"
 #include "Dimension.h"
 
 namespace Diginstrument
 {
-template <typename S, typename T>
+template <typename T>
 class Instrument
 {
   public:
-    void add(S && spectrum)
+    void add(Residual<T> && residual)
     {
-        spectra.push_back(std::move(spectrum));
+        this->residuals.push_back(std::move(residual));
     }
 
-    void add(PartialSet<double> && partialSet)
+    void add(PartialSet<T> && partialSet)
     {
         partialSets.push_back(std::move(partialSet));
     }
 
-    const vector<S> & getSpectra() const
+    const vector<Residual<T>> & getResiduals() const
     {
-        return spectra;
+        return residuals;
     }
 
     const vector<PartialSet<T>> & getPartialSets() const
@@ -33,38 +33,40 @@ class Instrument
 
     void reserve(unsigned int n)
     {
-        spectra.reserve(n);
+        residuals.reserve(n);
+        partialSets.reserve(n);
     }
 
     void clear()
     {
-        spectra.clear();
+        residuals.clear();
+        partialSets.clear();
     }
 
     std::string toString(unsigned int spaces)
     {
-        return Diginstrument::JSONConverter::toJSON(name, dimensions, spectra, partialSets).dump(spaces);
+        return Diginstrument::JSONConverter<T>::toJSON(name, dimensions, residuals, partialSets).dump(spaces);
     }
 
-    static Diginstrument::Instrument<S, T> fromJSON(ordered_json object)
+    static Diginstrument::Instrument<T> fromJSON(ordered_json object)
     {
-        Diginstrument::Instrument<S, T> res;
+        Diginstrument::Instrument<T> res;
         res.name = object["name"];
         res.dimensions.reserve(object["dimensions"].size());
         for(const auto & d : object["dimensions"])
         {
-            res.dimensions.push_back(Diginstrument::JSONConverter::dimensionFromJSON(d));
+            res.dimensions.push_back(Diginstrument::JSONConverter<T>::dimensionFromJSON(d));
         }
         
-        res.reserve(object["spectra"].size());
-        for(const auto & s : object["spectra"])
+        res.reserve(object["residuals"].size());
+        for(const auto & s : object["residuals"])
         {
-            res.add(Diginstrument::JSONConverter::splineFromJSON(s));
+            res.add(Diginstrument::JSONConverter<T>::residualFromJSON(s));
         }
         res.reserve(object["partial_sets"].size());
         for(const auto & p : object["partial_sets"])
         {
-            res.add(Diginstrument::JSONConverter::partialSetFromJSON(p));
+            res.add(Diginstrument::JSONConverter<T>::partialSetFromJSON(p));
         }
         return res;
     }
@@ -73,7 +75,7 @@ class Instrument
     std::vector<Diginstrument::Dimension> dimensions;
 
   private:
-    std::vector<S> spectra;
+    std::vector<Residual<T>> residuals;
     std::vector<PartialSet<T>> partialSets;
 };
 };

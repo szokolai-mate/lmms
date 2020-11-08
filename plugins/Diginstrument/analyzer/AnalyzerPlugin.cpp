@@ -52,11 +52,8 @@ QString AnalyzerPlugin::fullDisplayName() const
 }
 
 //TMP
-std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pair<string, double>> coordinates, double partialCutoffParameter,  double partialHeightCutoffParameter, double partialMinDistance, double residualCutoffParameter)
+std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pair<string, float>> coordinates, double partialCutoffParameter, double partialHeightCutoffParameter, double partialMinDistance, double residualCutoffParameter)
 {
-	//TMP: keep for visualization
-	spectra.clear();
-
 	m_sampleBuffer.setAudioFile(_audio_file);
 	std::vector<double> sample(m_sampleBuffer.frames());
 	for (int i = 0; i < sample.size(); i++)
@@ -68,16 +65,42 @@ std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pai
 	//tmp:visualization
 	visualization = new Diginstrument::InstrumentVisualizationWindow(this);
 
-	const auto partials = subtractiveAnalysis(sample, m_sampleBuffer.sampleRate(), coordinates, partialCutoffParameter, partialHeightCutoffParameter, partialMinDistance);
-	analyze(sample, partials, coordinates, residualCutoffParameter);
-	//TMP: some error stats
-	auto absRes = sample;
-	for(auto & e : absRes)
+	const auto partials = subtractiveAnalysis(sample, m_sampleBuffer.sampleRate(), partialCutoffParameter, partialHeightCutoffParameter, partialMinDistance);
+	//inst.add(PartialSet<double>(std::move(partials), coordinates, m_sampleBuffer.sampleRate()));
+	inst.add(PartialSet<float>((partials), coordinates, m_sampleBuffer.sampleRate()));
+	const auto res = residualAnalysis(sample, m_sampleBuffer.sampleRate(), residualCutoffParameter);
+	inst.add(Residual<float>(res, coordinates));
+
+	//tmp: synthesize
+	std::vector<float> synth(sample.size(), 0);
+	for (int i = 0; i < sample.size(); i++)
+	{
+		//partials
+		for (const auto &partial : partials)
+		{
+			synth[i] += cos(partial[i].phase) * partial[i].amplitude;
+		}
+	}
+	//TODO: add back residual
+	/*for(auto s : synth)
+	{
+		cout<<std::fixed<<s<<" ";
+	}
+	std::cout<<std::endl;*/
+
+	//tmp: error signal
+	std::vector<float> errorSignal(sample.size(), 0);
+	for (int i = 0; i < sample.size(); i++)
+	{
+		//tmp: left only
+		errorSignal[i] = m_sampleBuffer.data()[i][0] - synth[i];
+	}
+	for (auto &e : errorSignal)
 	{
 		e = std::abs(e);
 	}
-	cout<<"highest amp in residual: "<<*max_element(absRes.begin(), absRes.end())<<std::endl;
-	cout<<"average amp in residual: "<<std::accumulate(absRes.begin(), absRes.end(), 0.0) / absRes.size()<<std::endl;
+	cout << "highest amp in error signal: " << *max_element(errorSignal.begin(), errorSignal.end()) << std::endl;
+	cout << "mean amp in error signal: " << std::accumulate(errorSignal.begin(), errorSignal.end(), 0.0) / errorSignal.size() << std::endl;
 
 	//tmp: show raw visualization
 	visualization->show();
@@ -85,37 +108,41 @@ std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pai
 	return "TODO";
 }
 
-QtDataVisualization::QSurfaceDataArray * AnalyzerPlugin::getSurfaceData(double minTime, double maxTime, double minFreq, double maxFreq, int timeSamples, int freqSamples)
+QtDataVisualization::QSurfaceDataArray *AnalyzerPlugin::getSurfaceData(double minTime, double maxTime, double minFreq, double maxFreq, int timeSamples, int freqSamples)
 {
 	const double stepX = (maxFreq - minFreq) / double(freqSamples - 1);
-    const double stepZ = (maxTime - minTime) / double(timeSamples - 1);
+	const double stepZ = (maxTime - minTime) / double(timeSamples - 1);
 
-	QSurfaceDataArray * data = new QSurfaceDataArray;
+	QSurfaceDataArray *data = new QSurfaceDataArray;
 	data->reserve(timeSamples);
-	for(int i = 0; i<timeSamples;i++)
+	for (int i = 0; i < timeSamples; i++)
 	{
 		QSurfaceDataRow *dataRow = new QSurfaceDataRow(freqSamples);
-		double z = qMin(maxTime, (i * stepZ + minTime));
+		/*double z = qMin(maxTime, (i * stepZ + minTime));
 		int index = 0;
 		//TODO: new instrument model invalidated this: needs coordinates now
+		//TODO: residual and partial broke it
 		auto it = std::lower_bound(spectra.begin(), spectra.end(), SplineSpectrum<double, 4>(std::vector<std::pair<std::string, double>>{std::make_pair("time", z)}));
 		//TMP
-		if(it == spectra.end()) break;
+		if (it == spectra.end())
+			break;
 		//TMP
 		const auto spectrum = *it;
-		for (int j = 0; j < freqSamples; j++) {
+		for (int j = 0; j < freqSamples; j++)
+		{
 			double x = qMin(maxFreq, (j * stepX + minFreq));
 			(*dataRow)[index++].setPosition(QVector3D(x, spectrum[x].amplitude, z));
 		}
 		//tmp: identical to discrete
-		for(const auto & c : spectrum.getComponents(0))
+		for (const auto &c : spectrum.getComponents(0))
 		{
 			//NOTE: BUGHUNT: missing inbetween piece causes segfault
-			if(c.frequency<=minFreq || c.frequency>=maxFreq) continue;
-			(*dataRow)[std::round((c.frequency-minFreq)/((maxFreq-minFreq)/(double)freqSamples))].setPosition(QVector3D(c.frequency,c.amplitude, z));
-		}
-		
-		*data<<dataRow;
+			if (c.frequency <= minFreq || c.frequency >= maxFreq)
+				continue;
+			(*dataRow)[std::round((c.frequency - minFreq) / ((maxFreq - minFreq) / (double)freqSamples))].setPosition(QVector3D(c.frequency, c.amplitude, z));
+		}*/
+
+		*data << dataRow;
 	}
 
 	return data;
@@ -124,245 +151,194 @@ QtDataVisualization::QSurfaceDataArray * AnalyzerPlugin::getSurfaceData(double m
 void AnalyzerPlugin::writeInstrumentToFile(std::string filename)
 {
 	ofstream file(filename);
-	if(file.is_open())
+	if (file.is_open())
 	{
 		//TMP: pretty printed
-		file<<fixed<<inst.toString(4);
+		file << fixed << inst.toString(4);
 		file.close();
 	}
 }
 
-void AnalyzerPlugin::analyze(const std::vector<double> & signal, std::vector<std::vector<Diginstrument::Component<double>>> partials, vector<pair<string, double>> coordinates, double minProminence)
+std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>>> AnalyzerPlugin::residualAnalysis(
+	const std::vector<double> &signal,
+	unsigned int sampleRate,
+	double minProminence)
 {
+	//calculate mean of absolute residual signal
+	double absResidualMean = 0;
+	for (const auto &e : signal)
+	{
+		absResidualMean += std::abs(e);
+	}
+	absResidualMean /= (double)(signal.size());
+
 	//do CWT
-	const int level = 18;
-	CWT transform("morlet", 6, level, m_sampleBuffer.sampleRate());
-	const double normalizationConstant = CWT::calculateMagnitudeNormalizationConstant(6);
+	const int level = 8;
+	CWT<float> transform("morlet", 6, level, sampleRate);
 	transform(signal);
 
-	const double transformStep = 0.01*(double)m_sampleBuffer.sampleRate();
-	SpectrumFitter<double, 4> fitter(1.25);
-
-	//tmp: statistics
-	int rejected = 0;
-	int accepted = 0;
-	int noComponents = 0;
-	int incomplete = 0;
-	int emptySplines = 0;
-	int goodBeginBadEnd = 0;
-	int badBedginGoodEnd = 0;	
-
-	//tmp: visualization
-	QImage colorRed = QImage(2, 2, QImage::Format_RGB32);
-	colorRed.fill(Qt::red);
-	QSurfaceDataArray * data = new QSurfaceDataArray;
-	data->reserve(m_sampleBuffer.frames()/transformStep);
-
-	//for each instance in time
-	for (int i = 0; i<m_sampleBuffer.frames(); i+=transformStep)
+	std::vector<std::vector<float>> unwrappedPhases;
+	std::vector<std::vector<float>> magnitudes;
+	const float normCWT = transform.calculateMagnitudeNormalizationConstant(6);
+	//construct magnitude and unwrapped phase matrices
+	for (int j = 0; j < level * CWT<float>::octaves; j++)
 	{
-		//get the coefficients in time
-		const auto momentarySpectrum = transform[i];
-		std::vector<std::pair<double, double>> rawSpectrum;
-		rawSpectrum.reserve(level * CWT::octaves);
-		//tmp: visualization
-		QSurfaceDataRow *dataRow = new QSurfaceDataRow(level * CWT::octaves);
-		int dataRowIndex = 0;
+		const auto cfs = transform.getScaleCoefficients(j);
+		std::vector<float> phase;
+		phase.reserve(cfs.size());
+		std::vector<float> mag;
+		mag.reserve(cfs.size());
 
-		//process the complex coefficients of the momentary CWT into a magnitude spectrum
-		for (int j = momentarySpectrum.size() - 1; j >= 0; j--)
+		for (const auto &c : cfs)
 		{
-			const auto & timeInstance = momentarySpectrum[j];
-			const double frequency = 1.0 / (timeInstance.period);
-			//TODO: is phase needed in residual?
-			//const double phase = std::ang(timeInstance.value);
-			//normalize magnitude
-			//TODO: source of constant?
-			const double mag = (std::abs(timeInstance.value*normalizationConstant) / (sqrt(timeInstance.scale*m_sampleBuffer.sampleRate())));
-			rawSpectrum.emplace_back(frequency, mag);
-			///tmp: visualization
-			(*dataRow)[dataRowIndex].setPosition(QVector3D(frequency, mag, (double)i/(double)m_sampleBuffer.sampleRate()));
-			dataRowIndex++;
+			phase.emplace_back(std::arg(c));
+			mag.emplace_back(std::abs(c * normCWT) / (sqrt(transform.getScale(j).first * sampleRate)));
 		}
-		//tmp:: visualization
-		*data << dataRow;
 
-		//TODO: fix and reintroduce peaks?
+		Diginstrument::Phase<float>::unwrapInPlace(phase);
+		magnitudes.emplace_back(std::move(mag));
+		unwrappedPhases.emplace_back(std::move(phase));
+	}
 
-		//seek critical points with discrete differential, then approximate hidden/overlapping peaks and filter to only include maxima
-		//const auto peaks = Diginstrument::PeakApproximation(Extrema::Differential::intermixed(rawSpectrum.begin(), rawSpectrum.end()));
-		//tmp: trying to fix weird interpolation problem, just use maxima for now, as hidden peaks are still primitive
-		//maybe: minprominence here should be independent of freq?
-		const auto peaks = Extrema::Differential::maxima(rawSpectrum.begin(), rawSpectrum.end(), [minProminence](double fr)->double{return minProminence;});
-		//const auto currentPartials = partials[i];
-		//TODO: is this the best place to convert to amp?
-		//after determining peaks, convert magnitude to amplitude
-		//TMP: magnitude spectrogram
-		//TMP: fit to magnitude!
-		/*for(auto & p : rawSpectrum)
+	//TODO: TMP: we have to synthesize and calculate mean-ratio to normalize
+	//this is probably just a hack!
+	//synthesis
+	std::vector<float> synth(signal.size(), 0);
+	for (int j = 0; j < level * CWT<float>::octaves; j++)
+	{
+		for (int i = 0; i < signal.size(); i++)
 		{
-			p[1] = (sqrt( (p[0] * p[1]) / (double)m_sampleBuffer.sampleRate()));
-		}*/
-		//tmp: visualize peaks
-		for (auto p : peaks)
+			synth[i] += cos(unwrappedPhases[j][i]) * magnitudes[j][i];
+		}
+	}
+
+	//calculate synthesized residual absolute mean
+	double absSynthMean = 0;
+	for (const auto &e : synth)
+	{
+		absSynthMean += std::abs(e);
+	}
+	absSynthMean /= (double)(synth.size());
+
+	//normalize
+	const float norm = absResidualMean / absSynthMean;
+	for (int i = 0; i < synth.size(); i++)
+	{
+		//tmp: for error signal
+		synth[i] *= norm;
+
+		for (int j = 0; j < level * CWT<float>::octaves; j++)
 		{
-			const auto Y = Interpolation::CubicLagrange(rawSpectrum[p.index-1].first, rawSpectrum[p.index-1].second, rawSpectrum[p.index].first, rawSpectrum[p.index].second, rawSpectrum[p.index+1].first, rawSpectrum[p.index+1].second, rawSpectrum[p.index+2].first, rawSpectrum[p.index+2].second, p.x);
-			if(p.pointType==Extrema::Differential::CriticalPoint::PointType::maximum)
+			magnitudes[j][i] *= norm;
+		}
+	}
+
+	//construct res
+	std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>>> res;
+	for (int i = 0; i < signal.size(); i++)
+	{
+		std::vector<Diginstrument::Component<float>> timeInstance;
+		for (int j = 0; j < level * CWT<float>::octaves; j++)
+		{
+			if (magnitudes[j][i] > minProminence)
 			{
-				//TODO: relative path
-				visualization->addCustomItem(new QCustom3DItem("/home/mate/projects/lmms/plugins/Diginstrument/analyzer/resources/marker_mesh.obj",
-											QVector3D(p.x, Y,(double)i/(double)m_sampleBuffer.sampleRate()),
-											QVector3D(0.025f, 0.025f, 0.025f),
-											QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
-											colorRed));
+				timeInstance.emplace_back(1.0 / transform.getScale(j).second, unwrappedPhases[j][i], magnitudes[j][i]);
 			}
 		}
-	
-		//fit spline to raw spectrum
-		//tmp: just conver pairs back into vectors
-		vector<vector<double>> convertedRawSpectrum;
-		for(auto & p : rawSpectrum)
-		{
-			convertedRawSpectrum.push_back({p.first, p.second});
-		}
-		auto spline = fitter.peakFit(convertedRawSpectrum, peaks);
-		//auto spline = fitter.fitToPartials(rawSpectrum, currentPartials);
-		if (spline.getPieces().size() > 0 && spline.getBegin() <= 12 && spline.getEnd() > 21000)
-		{
-			//TMP: keep for visualization
-			//spectra.emplace_back(spline,std::vector<std::pair<std::string, double>>{std::make_pair("time",(double)i/(double)m_sampleBuffer.sampleRate())});
-			auto coordinatesCopy = coordinates;
-			coordinatesCopy.emplace_back("time",(double)i/(double)m_sampleBuffer.sampleRate());
-			inst.add(SplineSpectrum<double, 4>(
-				std::move(spline),
-				std::move(coordinatesCopy)
-				));
-			accepted++;
-			std::cout<<"accepted spline at time "<<(double)i/(double)m_sampleBuffer.sampleRate()<<std::endl;
-		}
-		//TMP: rejection statistics
-		else
-		{
-			if(spline.getPeaks().size()==0 && spline.getEnd()>0) {noComponents++;}
-			if(spline.getPieces().size()==0) {emptySplines++;}
-			if((spline.getBegin() > 12 && spline.getBegin()>0) || (spline.getEnd() < 21000 && spline.getEnd()>0)) {incomplete++;}
-			if(spline.getBegin()<12 && spline.getEnd()<21000 && spline.getBegin()>0 && spline.getEnd()>0) { goodBeginBadEnd++; }
-			if(spline.getBegin()>12 && spline.getEnd()>21000 && spline.getBegin()>0 && spline.getEnd()>0) { badBedginGoodEnd++; }
-			rejected++;
-		}
-	}
-	//tmp: add an empty spline at the end for silence
-	auto coordinatesCopy = coordinates;
-	coordinatesCopy.emplace_back("time",((double)m_sampleBuffer.frames()/(double)m_sampleBuffer.sampleRate()));
-	inst.add(SplineSpectrum<double, 4>(PiecewiseBSpline<double, 4>(),coordinatesCopy));
-	
-	//tmp: debug
-	std::cout<<"rejected splines: "<<rejected<<"/"<<accepted<<" ("<<100*(double)rejected/(double)(accepted+rejected)<<"%)"<<std::endl;
-	if(rejected>0){
-		std::cout<<"cause: no peaks: "<<noComponents<<"/"<<rejected<<" ("<<100*noComponents/rejected<<"%)"<<std::endl;
-		std::cout<<"cause: empty spline: "<<emptySplines<<"/"<<rejected<<" ("<<100*emptySplines/rejected<<"%)"<<std::endl;
-		std::cout<<"cause: incomplete: "<<incomplete<<"/"<<rejected<<" ("<<100*incomplete/rejected<<"%)"<<std::endl;
-		std::cout<<"cause: good begin, bad end: "<<goodBeginBadEnd<<"/"<<rejected<<" ("<<100*goodBeginBadEnd/rejected<<"%)"<<std::endl;
-		std::cout<<"cause: good end, bad begin: "<<badBedginGoodEnd<<"/"<<rejected<<" ("<<100*badBedginGoodEnd/rejected<<"%)"<<std::endl;
+		if(timeInstance.size()>0) res.emplace_back(i , std::move(timeInstance));
 	}
 
-	//TODO: get rid of beégetett 4
-	//tmp: set raw visualization data
-	visualization->setSurfaceData(data);
+	//tmp: visualize
+	//TODO
+
+	return res;
 }
 
 //TODO: current output: spectra over time
 //problems: FULL output = samples*partials
 //phase + magnitude
 //TODO: maybe reduce samples by excluding places of linear phase? and linear mag? then i will need to include time? possibly useless? only zero magnitude?
-std::vector<std::vector<Diginstrument::Component<double>>> AnalyzerPlugin::subtractiveAnalysis(std::vector<double> & signal, unsigned int sampleRate, vector<pair<string, double>> coordinates, double minProminence, double heightThreshold, double minDistance)
+std::vector<std::vector<Diginstrument::Component<float>>> AnalyzerPlugin::subtractiveAnalysis(
+	std::vector<double> &signal,
+	unsigned int sampleRate,
+	double minProminence,
+	double heightThreshold,
+	double minDistance)
 {
-	//tmp: FFT visualization
-	QImage colorBlack = QImage(2, 2, QImage::Format_RGB32);
-	colorBlack.fill(Qt::black);
-
 	//TODO: avg energy to detect broad-changing frequencies
 	//calculate FFT magnitudes of the signal
-	Diginstrument::FFT fft(signal.size());
+	Diginstrument::FFT<float> fft(signal.size());
 	const auto mags = fft(signal, m_sampleBuffer.sampleRate());
 	//find peaks in FFT, indicating areas of significance
-	//TMP: debug: higher min distance
-	const auto maxima = Extrema::Differential::maxima(mags.begin(), mags.end(), [minProminence](double fr)->double{ return minProminence; }, heightThreshold, minDistance);
+	const auto maxima = Extrema::Differential::maxima(
+		mags.begin(), mags.end(), [minProminence](double fr) -> double { return minProminence; }, heightThreshold, minDistance);
 	//TMP: visualize found frequencies
-	for(auto p : maxima)
+	QImage colorBlack = QImage(2, 2, QImage::Format_RGB32);
+	colorBlack.fill(Qt::black);
+	for (auto p : maxima)
 	{
-		//tmp: debug
-		//cout<<p.x<<": ("<<mags[p.index].first<<", "<<mags[p.index].second<<")"<<endl;
-		const auto Y = Interpolation::CubicLagrange(mags[p.index-1].first, mags[p.index-1].second, mags[p.index].first, mags[p.index].second, mags[p.index+1].first, mags[p.index+1].second, mags[p.index+2].first, mags[p.index+2].second, p.x);
+		const auto Y = Interpolation::CubicLagrange<float>(mags[p.index - 1].first, mags[p.index - 1].second, mags[p.index].first, mags[p.index].second, mags[p.index + 1].first, mags[p.index + 1].second, mags[p.index + 2].first, mags[p.index + 2].second, p.x);
 		visualization->addCustomItem(new QCustom3DItem("/home/mate/projects/lmms/plugins/Diginstrument/analyzer/resources/marker_mesh.obj",
-												QVector3D(p.x, Y, 0),
-												QVector3D(0.025f, 0.025f, 0.025f),
-												QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
-												colorBlack));
+													   QVector3D(p.x, Y, 0),
+													   QVector3D(0.025f, 0.025f, 0.025f),
+													   QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
+													   colorBlack));
 	}
 
-	vector<vector<double>> phases;
-	vector<vector<double>> amps;
-	std::vector<std::vector<Diginstrument::Component<double>>> partials;
-	std::vector<std::vector<Diginstrument::Component<double>>> res(signal.size());
+	vector<vector<float>> phases;
+	vector<vector<float>> amps;
+	std::vector<std::vector<Diginstrument::Component<float>>> res;
 	//tmp: visualization
 	const auto palette = Diginstrument::ColorPalette::generatePaletteTextures(maxima.size());
 
 	constexpr double parameter = 6;
-	const double normalizationConstant = CWT::calculateMagnitudeNormalizationConstant(parameter);
+	const float normalizationConstant = CWT<float>::calculateMagnitudeNormalizationConstant(parameter);
 	//for each selected frequency
-	for(int j = 0; j<maxima.size(); j++)
+	for (int j = 0; j < maxima.size(); j++)
 	{
 		const double fr = maxima[j].x;
 		//TODO: tie wavelet parameters together
-		const double scale = (parameter+sqrt(2+parameter*parameter)) / (4*M_PI*fr);
+		const double scale = (parameter + sqrt(2 + parameter * parameter)) / (4 * M_PI * fr);
 		//perform a single center frequency CWT
-		const auto cfs = CWT::singleScaleCWT(signal, scale, sampleRate);
-		phases.push_back(vector<double>(signal.size(),0));
-		amps.push_back(vector<double>(signal.size(),0));
+		const auto cfs = CWT<float>::singleScaleCWT(signal, scale, sampleRate);
+		phases.push_back(vector<float>(signal.size(), 0));
+		amps.push_back(vector<float>(signal.size(), 0));
 		//for each instance in time
-		for(int i = 0; i<cfs.size(); i++)
+		for (int i = 0; i < cfs.size(); i++)
 		{
 			//process the complex coefficient
-			const auto & c = cfs[i];
+			const auto &c = cfs[i];
 			//TODO: this has been the most successful equation, as it resulted in the same amp for both components in 440+50.wav
 			//I have no idea where the constant comes from; probably ties into the wavelet parameter
-			const double amp = (std::abs(normalizationConstant*c) / (sqrt(scale*sampleRate)));
+			const float amp = (std::abs(normalizationConstant * c) / (sqrt(scale * sampleRate)));
 			amps.back()[i] = amp;
 			phases.back()[i] = std::arg(c);
-			
 		}
 		//unwrap phase
-		Diginstrument::Phase::unwrapInPlace(phases.back());
+		Diginstrument::Phase<float>::unwrapInPlace(phases.back());
 		//partial initialization
-		vector<Diginstrument::Component<double>> partial;
+		vector<Diginstrument::Component<float>> partial;
 		partial.reserve(amps.size());
-		for(int i = 0; i<signal.size(); i++)
+		for (int i = 0; i < signal.size(); i++)
 		{
 			//tmp: add partial to instrument
 			partial.emplace_back(fr, phases.back()[i], amps.back()[i]);
 			//subtract extracted partial to get residual signal
-			signal[i]-=cos(phases.back()[i])*amps.back()[i];
-			//TODO: rethink output
-			res[i].emplace_back(fr, phases.back()[i], amps.back()[i]);
+			signal[i] -= cos(phases.back()[i]) * amps.back()[i];
 			//tmp: visualization
-			if(i%440 == 1 && amps.back()[i]>0.001)
+			if (i % 440 == 1 && amps.back()[i] > 0.001)
 			{
 				//calculate freq for visualization from diff of phase
-				const double freq = abs(((phases.back()[i] - phases.back()[i-1]) * m_sampleBuffer.sampleRate()) / (2*M_PI));
+				const double freq = abs(((phases.back()[i] - phases.back()[i - 1]) * m_sampleBuffer.sampleRate()) / (2 * M_PI));
 				visualization->addCustomItem(new QCustom3DItem("/home/mate/projects/lmms/plugins/Diginstrument/analyzer/resources/marker_mesh.obj",
-												QVector3D(freq, amps.back()[i],(double)i/(double)sampleRate),
-												QVector3D(0.01f, 0.01f, 0.01f),
-												QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
-												palette[j]));
+															   QVector3D(freq, amps.back()[i], (double)i / (double)sampleRate),
+															   QVector3D(0.01f, 0.01f, 0.01f),
+															   QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
+															   palette[j]));
 			}
 		}
 		//add partial to set
-		partials.push_back(std::move(partial));
+		res.push_back(std::move(partial));
 	}
-	//add partial set to instrument
-	//TODO: checks
-	inst.add(PartialSet<double>(std::move(partials), std::move(coordinates), m_sampleBuffer.sampleRate()));
-
 	return res;
 }

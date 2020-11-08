@@ -26,6 +26,7 @@ double *period; // Period vector of size J
 double *coi; // Cone of Influence vector of size siglength
 */
 
+template <typename T>
 class CWT
 {
 private:
@@ -44,8 +45,8 @@ public:
     {
       public:
         const double scale, period;
-        const std::complex<double> value;
-        TimeInstance(double scale, double period, double re, double im) : scale(scale), period(period), value(re, im) {}
+        const std::complex<T> value;
+        TimeInstance(double scale, double period, T re, T im) : scale(scale), period(period), value(re, im) {}
     };
 
     bool setWavelet(const std::string &name, const double &parameter, unsigned int level, unsigned int sampleRate)
@@ -82,19 +83,36 @@ public:
         return res;
     }
 
-    std::vector<double> inverseTransform()
+    std::pair<double, double> getScale(unsigned int scaleIndex)
     {
-        std::vector<double> res(signalLength);
+        return std::make_pair(wt->scale[scaleIndex], wt->period[scaleIndex]);
+    }
+
+    std::vector<std::complex<T>> getScaleCoefficients(unsigned int scaleIndex, unsigned int timeStep = 1)
+    {
+        //TODO: test
+        std::vector<std::complex<T>> res;
+        res.reserve(signalLength/timeStep);
+        for (int i = scaleIndex*signalLength; i<signalLength*(scaleIndex+1); i+=timeStep)
+        {
+            res.emplace_back(wt->output[i].re, wt->output[i].im);
+        }
+        return res;
+    }
+
+    std::vector<T> inverseTransform()
+    {
+        std::vector<T> res(signalLength);
         icwt(wt, &res[0]);
         return res;
     }
 
-    static std::vector<std::complex<double>> singleScaleCWT(const std::vector<double> & signal, double scale, unsigned int sampleRate, std::string waveletName = "morlet", int waveletParameter = 6)
+    static std::vector<std::complex<T>> singleScaleCWT(const std::vector<double> & signal, double scale, unsigned int sampleRate, std::string waveletName = "morlet", int waveletParameter = 6)
     {
         cwt_object wt = cwt_init(waveletName.c_str(), waveletParameter, signal.size(), 1.0/(double)sampleRate, 1);
         setCWTScales(wt, scale, 0, "lin", 0);
         cwt(wt, &signal[0]);
-        std::vector<std::complex<double>> res;
+        std::vector<std::complex<T>> res;
         res.reserve(signal.size());
         for(int i = 0; i<signal.size(); i++)
         {
@@ -105,7 +123,7 @@ public:
     }
 
     //TODO: not actually correct; only works if the parameter = 6
-    static double calculateMagnitudeNormalizationConstant(double waveletParameter)
+    static T calculateMagnitudeNormalizationConstant(double waveletParameter)
     {
         return pow((4*M_PI) / (waveletParameter+sqrt(waveletParameter*waveletParameter+2)), 2);
     }

@@ -24,7 +24,7 @@ class DiginstrumentView : public InstrumentView
   protected slots:
     void showInstumentVisualization();
     void openInstrumentFile();
-    void updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<double> coordinates);
+    void updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates);
     void updateCoordinates();
 
   private:

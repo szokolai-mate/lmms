@@ -6,9 +6,13 @@ AnalyzerView::AnalyzerView(ToolPlugin * _parent ) :
     /*TODO */
     m_nameField = new QLineEdit;
     m_partialCutoffField = new QLineEdit;
+    m_partialCutoffField->setText("0.002");
     m_residualCutoffField = new QLineEdit;
+    m_residualCutoffField->setText("0.0001");
     m_partialAbsCutoffField = new QLineEdit;
+    m_partialAbsCutoffField->setText("0.0005");
     m_partialMinDistanceField = new QLineEdit;
+    m_partialMinDistanceField->setText("15");
     m_openAudioFileButton = new QPushButton( "Add note from file with current coordinates", this);
     m_openAudioFileButton->setCursor( QCursor( Qt::PointingHandCursor ) );
     m_openVisualizationButton = new QPushButton( "Show instrument visualization (broken)");
@@ -93,7 +97,7 @@ void AnalyzerView::openAudioFile( void )
 							openAudioFile();
 	if( af != "" )
 	{
-    std::vector<std::pair<std::string, double>> coordinates;
+    std::vector<std::pair<std::string, float>> coordinates;
     for(auto * p : dimensionFields)
     {
       const auto pair = p->getCoordinate();

@@ -74,18 +74,18 @@ public:
     return true;
   }
 
-  QtDataVisualization::QSurfaceDataArray * getInstrumentSurfaceData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<double> coordinates);
-  std::vector<Diginstrument::Component<double>> getPartialVisualization(float minTime, float maxTime, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<double> coordinates);
+  QtDataVisualization::QSurfaceDataArray * getInstrumentSurfaceData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates);
+  std::vector<Diginstrument::Component<float>> getPartialVisualization(float minTime, float maxTime, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<float> coordinates);
 
 protected:
-  std::vector<double> coordinates;
+  std::vector<float> coordinates;
 
 private:
   friend class DiginstrumentView;
-  Diginstrument::Synthesizer synth;
-  Diginstrument::Interpolator<double, SplineSpectrum<double, 4>> interpolator;
+  Diginstrument::Synthesizer<float> synth;
+  Diginstrument::Interpolator<float> interpolator;
   //TODO: maybe "reroute" spectra so that they wont be duplicated in interpolator and instrument
-  Diginstrument::Instrument<SplineSpectrum<double, 4>, double> instrument;
+  Diginstrument::Instrument<float> instrument;
 
   bool setInstrumentFile(const QString & fileName);
   bool loadInstrumentFile();

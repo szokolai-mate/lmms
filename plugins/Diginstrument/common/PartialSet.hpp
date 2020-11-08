@@ -22,13 +22,13 @@ class PartialSet
     //move constructor
     PartialSet(PartialSet<T> && other) : partials(std::move(other.partials)), labels(std::move(other.labels)), sampleRate(other.sampleRate){}
     //parameters by reference
-    PartialSet(const std::vector<std::vector<Diginstrument::Component<double>>> & partials, const std::vector<std::pair<std::string, T>> & labels, unsigned int sampleRate)
+    PartialSet(const std::vector<std::vector<Diginstrument::Component<T>>> & partials, const std::vector<std::pair<std::string, T>> & labels, unsigned int sampleRate)
         : partials(partials), labels(labels), sampleRate(sampleRate){}
     //move partials
-    PartialSet(std::vector<std::vector<Diginstrument::Component<double>>> && partials, const std::vector<std::pair<std::string, T>> & labels, unsigned int sampleRate)
+    PartialSet(std::vector<std::vector<Diginstrument::Component<T>>> && partials, const std::vector<std::pair<std::string, T>> & labels, unsigned int sampleRate)
         : partials(std::move(partials)), labels(labels), sampleRate(sampleRate){}
     //move partials and labels
-    PartialSet(std::vector<std::vector<Diginstrument::Component<double>>> && partials, std::vector<std::pair<std::string, T>> && labels, unsigned int sampleRate)
+    PartialSet(std::vector<std::vector<Diginstrument::Component<T>>> && partials, std::vector<std::pair<std::string, T>> && labels, unsigned int sampleRate)
         : partials(std::move(partials)), labels(std::move(labels)), sampleRate(sampleRate){}
 
 

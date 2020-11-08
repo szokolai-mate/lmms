@@ -5,10 +5,11 @@
 
 namespace Diginstrument
 {
+template <typename T>
 class FFT
 {
   public:
-    std::vector<std::pair<double, double>> operator()(const std::vector<double> & signal, unsigned int sampleRate)
+    std::vector<std::pair<T, T>> operator()(const std::vector<double> & signal, unsigned int sampleRate)
     {
         //TODO: exception
         if(signal.size()!=in.size()) return {};
@@ -16,12 +17,12 @@ class FFT
         fftw_execute(plan);
         
         const unsigned int outSize = floor(N/2)+1;
-        std::vector<std::pair<double, double>> res(outSize);
+        std::vector<std::pair<T, T>> res(outSize);
         for(int i = 0; i<outSize; i++)
         {
-            const double re = out[i][0]/outSize;
-            const double im = out[i][1]/outSize;
-            res[i] = std::make_pair((double)i/((double)N/(double)sampleRate), sqrt(re*re + im*im));
+            const T re = out[i][0]/outSize;
+            const T im = out[i][1]/outSize;
+            res[i] = std::make_pair((T)i/((T)N/(T)sampleRate), sqrt(re*re + im*im));
         }
         return res;
     }

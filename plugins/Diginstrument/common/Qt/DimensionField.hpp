@@ -55,7 +55,7 @@ class DimensionField : public QWidget
       layout->setSpacing(0);
     }
 
-    std::pair<std::string, double> getCoordinate() const
+    std::pair<std::string, float> getCoordinate() const
     {
       return std::make_pair(label->text().toStdString(), value->text().toDouble());
     }

@@ -59,8 +59,8 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 								   sampleFrame *_working_buf)
 {
 	/*TMP*/
-	const double startTime = noteHandle->totalFramesPlayed() / (double)Engine::mixer()->processingSampleRate();
-	vector<double> coordinates = {noteHandle->frequency()};
+	//const double startTime = noteHandle->totalFramesPlayed() / (double)Engine::mixer()->processingSampleRate();
+	vector<float> coordinates = {noteHandle->frequency()};
 	//tmp:
 	//cout<<"fr: "<<coordinates.front()<<endl;
 	//TODO: first coordinate is freq, might not be correct?
@@ -70,9 +70,16 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 		coordinates.emplace_back(c);
 	}
 	auto partials = interpolator.getPartials(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
-	coordinates.emplace_back(startTime);
-	//auto spectrum = interpolator.getSpectrum(coordinates);
+	//coordinates.emplace_back(startTime);
+	auto residual = interpolator.getResidual(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
 	vector<float> audioData = this->synth.playNote(partials, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
+	vector<float> residualData = this->synth.playResidual(residual, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
+
+	//tmp
+	for(int i = 0; i<residualData.size(); i++)
+	{
+		audioData[i]+=residualData[i];
+	}
 
 	/*tmp: stereo*/
 	unsigned int counter = 0;
@@ -125,10 +132,10 @@ bool DiginstrumentPlugin::loadInstrumentFile()
 		file.close();
 		//TODO: separate into loading from file and loading saved
 		//TODO: catch?
-		instrument = Diginstrument::Instrument<SplineSpectrum<double, 4>, double>::fromJSON(ordered_json::parse(arr.toStdString()));
+		instrument = Diginstrument::Instrument<float>::fromJSON(ordered_json::parse(arr.toStdString()));
 		//tmp:
 		interpolator.clear();
-		interpolator.addSpectra(instrument.getSpectra());
+		interpolator.addResiduals(instrument.getResiduals());
 		interpolator.addPartialSets(instrument.getPartialSets());
 		interpolator.setDimensions(instrument.dimensions);
 		return true;
@@ -136,7 +143,7 @@ bool DiginstrumentPlugin::loadInstrumentFile()
 	else return false;
 }
 
-QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfaceData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<double> coordinates)
+QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfaceData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates)
 {
 	//TODO: better/refactoring
 	coordinates.push_back(0);
@@ -153,7 +160,8 @@ QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfa
 		coordinates.back() = z;
 		
 		int index = 0;
-		const auto spectrum = interpolator.getSpectrum(coordinates);
+		//TODO: fix after residual
+		/*const auto spectrum = interpolator.getSpectrum(coordinates);
 		for (int j = 0; j < freqSamples; j++) {
 			float x = qMin(maxFreq, (j * stepX + minFreq));
 			(*dataRow)[index++].setPosition(QVector3D(x, spectrum[x].amplitude, z));
@@ -163,7 +171,7 @@ QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfa
 		{
 			if(c.frequency<=minFreq || c.frequency>=maxFreq) continue;
 			(*dataRow)[std::round((c.frequency-minFreq)/((maxFreq-minFreq)/(float)freqSamples))].setPosition(QVector3D(c.frequency,c.amplitude, z));
-		}
+		}*/
 			//TODO: should i visualize peaks explicitly? (similarly to discrete above)
 		*data<<dataRow;
 	}
@@ -171,9 +179,9 @@ QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfa
 	return data;
 }
 
-std::vector<Diginstrument::Component<double>> DiginstrumentPlugin::getPartialVisualization(float minTimeMilisec, float maxTimeMilisec, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<double> coordinates)
+std::vector<Diginstrument::Component<float>> DiginstrumentPlugin::getPartialVisualization(float minTimeMilisec, float maxTimeMilisec, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<float> coordinates)
 {
-	std::vector<Diginstrument::Component<double>> res;
+	std::vector<Diginstrument::Component<float>> res;
 	//TODO: sample rate is needed here
 	const int sampleRate = 44100;
 	const auto partials = interpolator.getPartials(coordinates, (minTimeMilisec/1000.0)*sampleRate, ((maxTimeMilisec-minTimeMilisec)/1000.0)*sampleRate).get();

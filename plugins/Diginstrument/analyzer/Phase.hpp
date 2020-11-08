@@ -7,14 +7,15 @@
 
 namespace Diginstrument
 {
+template <typename T>
 class Phase
 {
   public:
-    static void unwrapInPlace(std::vector<double> & phase)
+    static void unwrapInPlace(std::vector<T> & phase)
     {
         constexpr double cutoff = M_PI;
         //calculate derivative
-        std::vector<double> diff(phase.size()-1);
+        std::vector<T> diff(phase.size()-1);
         for(int i = 1; i<phase.size(); i++)
         {
             diff[i-1]=phase[i]-phase[i-1];
