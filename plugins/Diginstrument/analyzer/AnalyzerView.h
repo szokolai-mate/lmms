@@ -24,7 +24,7 @@ class AnalyzerView : public ToolPluginView
     void showVisualization();
     void addDimension();
     void deleteDimensionField(DimensionField * field);
-    void updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<double> coordinates);
+    void updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates);
 
   private:
 	  virtual void modelChanged( void );

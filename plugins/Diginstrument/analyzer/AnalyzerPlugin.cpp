@@ -82,6 +82,13 @@ std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pai
 		}
 	}
 	//TODO: add back residual
+	for (const auto & momentarySpectrum : res)
+	{
+		for(const auto & c : momentarySpectrum.second)
+		{
+			synth[momentarySpectrum.first]+=cos(c.phase)*c.amplitude;
+		}
+	}
 	/*for(auto s : synth)
 	{
 		cout<<std::fixed<<s<<" ";
@@ -226,7 +233,6 @@ std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>
 	{
 		//tmp: for error signal
 		synth[i] *= norm;
-
 		for (int j = 0; j < level * CWT<float>::octaves; j++)
 		{
 			magnitudes[j][i] *= norm;
@@ -249,7 +255,19 @@ std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>
 	}
 
 	//tmp: visualize
-	//TODO
+	unsigned int stepSize = 441;
+	QSurfaceDataArray *data = new QSurfaceDataArray;
+	data->reserve(synth.size()/stepSize);
+	for(int i = 0; i<synth.size(); i+=stepSize)
+	{
+		QSurfaceDataRow *dataRow = new QSurfaceDataRow(level * CWT<float>::octaves);
+		for (int j = 0; j < level * CWT<float>::octaves; j++)
+		{
+			(*dataRow)[j].setPosition(QVector3D(1.0 / transform.getScale(j).second, magnitudes[j][i], (double)i/(double)(m_sampleBuffer.sampleRate())));
+		}
+		*data << dataRow;
+	}
+	visualization->setSurfaceData(data);
 
 	return res;
 }

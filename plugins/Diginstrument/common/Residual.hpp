@@ -30,14 +30,14 @@ public:
     Residual(std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<T>>>> &&spectra, std::vector<std::pair<std::string, T>> &&labels)
         : momentarySpectra(std::move(spectra)), labels(std::move(labels)) {}
 
-    void add(const std::vector<Diginstrument::Component<T>> &spectrum, unsigned int frame)
+    void add(const std::pair<unsigned int, std::vector<Diginstrument::Component<T>>> &spectrum)
     {
-        momentarySpectra.push_back(std::make_pair(frame, spectrum));
+        momentarySpectra.push_back(spectrum);
     }
 
-    void add(std::vector<Diginstrument::Component<T>> &&partial, unsigned int frame)
+    void add(std::pair<unsigned int, std::vector<Diginstrument::Component<T>>>  &&spectrum)
     {
-        momentarySpectra.push_back(std::make_pair(frame, std::move(partial)));
+        momentarySpectra.push_back(std::move(spectrum));
     }
 
     const std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<T>>>> &get() const
@@ -60,9 +60,13 @@ public:
         return momentarySpectra.size();
     }
 
+    void reserve(unsigned int size)
+    {
+        momentarySpectra.reserve(size);
+    }
+
     Residual<T> getSlice(unsigned int startFrame, unsigned int frames) const
     {
-        //TODO
         constexpr auto comparator = [](const std::pair<unsigned int, std::vector<Diginstrument::Component<T>>> &left, unsigned int right) -> bool {
             return left.first < right;
         };

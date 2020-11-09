@@ -7,6 +7,9 @@
 //TODO: spline synthesis
 //TODO: how to deal with quality?
 
+//tmp:
+#include <iostream>
+
 template <typename T>
 unsigned int Diginstrument::Synthesizer<T>::outSampleRate = DEFAULT_SAMPLE_RATE;
 template <typename T>
@@ -60,6 +63,8 @@ std::vector<float> Diginstrument::Synthesizer<T>::playNote(const PartialSet<T> &
 template <typename T>
 std::vector<float> Diginstrument::Synthesizer<T>::playResidual(const Residual<T> & residual, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
 {
+    //tmp: debug
+    std::cout<<"residuals: "<<residual.size()<<std::endl;
     std::vector<float> res(frames, 0);
     for(const auto & r : residual.get())
     {

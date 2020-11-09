@@ -10,7 +10,7 @@ void Diginstrument::InstrumentVisualizationWindow::setSurfaceData(QSurfaceDataAr
 Diginstrument::InstrumentVisualizationWindow::InstrumentVisualizationWindow(QObject * dataProvider)
 {   
     //TODO: clear data when closed? lotsa memory
-    connect(this, SIGNAL( requestDataUpdate(float, float, float, float, int, int, std::vector<double>) ), dataProvider, SLOT( updateVisualizationData(float, float, float, float, int, int, std::vector<double>) ));
+    connect(this, SIGNAL( requestDataUpdate(float, float, float, float, int, int, std::vector<float>) ), dataProvider, SLOT( updateVisualizationData(float, float, float, float, int, int, std::vector<float>) ));
 
     graph = new QtDataVisualization::Q3DSurface();
     container = QWidget::createWindowContainer(graph);
@@ -113,11 +113,11 @@ Diginstrument::InstrumentVisualizationWindow::~InstrumentVisualizationWindow()
 
 void Diginstrument::InstrumentVisualizationWindow::refresh()
 {
-    std::vector<double> coordinates;
+    std::vector<float> coordinates;
     coordinates.reserve(coordinateSliders.size());
     for(auto * slider : coordinateSliders)
     {
-        coordinates.push_back((double)slider->value());
+        coordinates.push_back(slider->value());
     }
     emit requestDataUpdate(startTimeSlider->value(),endTimeSlider->value(),startFreqSlider->value(),endFreqSlider->value(),timeSamples->text().toInt(),frequencySamples->text().toInt(), coordinates);
     graph->axisX()->setRange(startFreqSlider->value(), endFreqSlider->value());

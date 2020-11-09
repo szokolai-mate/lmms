@@ -109,7 +109,7 @@ void AnalyzerView::openAudioFile( void )
 	}
 }
 
-void AnalyzerView::updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<double> coordinates)
+void AnalyzerView::updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates)
 {
   visualization->setSurfaceData(castModel<AnalyzerPlugin>()->getSurfaceData(minTime/1000.0f,maxTime/1000.0f,minFreq,maxFreq,timeSamples,freqSamples));
 }

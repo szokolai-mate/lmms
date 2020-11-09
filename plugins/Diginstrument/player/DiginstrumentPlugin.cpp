@@ -73,6 +73,7 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 	//coordinates.emplace_back(startTime);
 	auto residual = interpolator.getResidual(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
 	vector<float> audioData = this->synth.playNote(partials, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
+	//vector<float> audioData(noteHandle->framesLeftForCurrentPeriod(),0);
 	vector<float> residualData = this->synth.playResidual(residual, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
 
 	//tmp
@@ -157,22 +158,25 @@ QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfa
 	{
 		QSurfaceDataRow *dataRow = new QSurfaceDataRow(freqSamples);
 		float z = qMin(maxTime, (i * stepZ + minTime));
-		coordinates.back() = z;
+		unsigned int startFrame = /*TMP: sampleRate*/ 44100*z;
+		//coordinates.back() = z;
 		
 		int index = 0;
 		//TODO: fix after residual
-		/*const auto spectrum = interpolator.getSpectrum(coordinates);
+		//const auto spectrum = interpolator.getSpectrum(coordinates);
+		const auto residualSlice = interpolator.getResidual(coordinates, startFrame, 1);
 		for (int j = 0; j < freqSamples; j++) {
 			float x = qMin(maxFreq, (j * stepX + minFreq));
-			(*dataRow)[index++].setPosition(QVector3D(x, spectrum[x].amplitude, z));
+			(*dataRow)[index++].setPosition(QVector3D(x, 0, z));
 		}
-		//tmp: identical to discrete
-		for(const auto & c : spectrum.getComponents(0))
+		if(residualSlice.size()>0)
 		{
-			if(c.frequency<=minFreq || c.frequency>=maxFreq) continue;
-			(*dataRow)[std::round((c.frequency-minFreq)/((maxFreq-minFreq)/(float)freqSamples))].setPosition(QVector3D(c.frequency,c.amplitude, z));
-		}*/
-			//TODO: should i visualize peaks explicitly? (similarly to discrete above)
+			for(const auto & c : residualSlice.get().front().second)
+			{
+				if(c.frequency<=minFreq || c.frequency>=maxFreq) continue;
+				(*dataRow)[std::round((c.frequency-minFreq)/((maxFreq-minFreq)/(float)freqSamples))].setPosition(QVector3D(c.frequency,c.amplitude, z));
+			}
+		}
 		*data<<dataRow;
 	}
 

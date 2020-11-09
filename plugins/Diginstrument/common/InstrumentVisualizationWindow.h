@@ -21,7 +21,7 @@ class InstrumentVisualizationWindow : public QWidget
     ~InstrumentVisualizationWindow();
 
   signals:
-    void requestDataUpdate(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<double> coordinates = {});
+    void requestDataUpdate(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates = {});
   private slots:
     void refresh();
     void slidersChanged();

@@ -4,7 +4,7 @@
 #include "SplineSpectrum.hpp"
 #include "Dimension.h"
 
-using ordered_json = nlohmann::ordered_json;
+using ordered_json = nlohmann::basic_json<nlohmann::ordered_map, std::vector, std::string, bool, std::int64_t, std::uint64_t, float>;
 
 namespace Diginstrument
 {
