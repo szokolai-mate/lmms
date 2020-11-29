@@ -67,21 +67,22 @@ std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pai
 
 	const auto partials = subtractiveAnalysis(sample, m_sampleBuffer.sampleRate(), partialCutoffParameter, partialHeightCutoffParameter, partialMinDistance);
 	//inst.add(PartialSet<double>(std::move(partials), coordinates, m_sampleBuffer.sampleRate()));
-	inst.add(PartialSet<float>((partials), coordinates, m_sampleBuffer.sampleRate()));
+	const PartialSet<float> partialSet((partials), coordinates, m_sampleBuffer.sampleRate());
+	inst.add(PartialSet<float>(std::move(partials), coordinates, m_sampleBuffer.sampleRate()));
 	const auto res = residualAnalysis(sample, m_sampleBuffer.sampleRate(), residualCutoffParameter);
 	inst.add(Residual<float>(res, coordinates));
 
 	//tmp: synthesize
 	std::vector<float> synth(sample.size(), 0);
-	for (int i = 0; i < sample.size(); i++)
+	//partials
+	for (const auto &partial : partialSet.get())
 	{
-		//partials
-		for (const auto &partial : partials)
-		{
+		for (int i = 0; i < partial.size(); i++)
+		{		
 			synth[i] += cos(partial[i].phase) * partial[i].amplitude;
 		}
 	}
-	//TODO: add back residual
+
 	for (const auto & momentarySpectrum : res)
 	{
 		for(const auto & c : momentarySpectrum.second)
@@ -104,11 +105,11 @@ std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pai
 	}
 	for (auto &e : errorSignal)
 	{
-		e = std::abs(e);
+		e = pow(std::abs(e),2);
 	}
 	cout << "highest amp in error signal: " << *max_element(errorSignal.begin(), errorSignal.end()) << std::endl;
 	cout << "mean amp in error signal: " << std::accumulate(errorSignal.begin(), errorSignal.end(), 0.0) / errorSignal.size() << std::endl;
-
+	std::cout<<"estimated fundamentalFrequency: "<<partialSet.getFundamentalFrequency()<<std::endl;
 	//tmp: show raw visualization
 	visualization->show();
 
@@ -117,6 +118,7 @@ std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pai
 
 QtDataVisualization::QSurfaceDataArray *AnalyzerPlugin::getSurfaceData(double minTime, double maxTime, double minFreq, double maxFreq, int timeSamples, int freqSamples)
 {
+	//TODO: fix this (but why?)
 	const double stepX = (maxFreq - minFreq) / double(freqSamples - 1);
 	const double stepZ = (maxTime - minTime) / double(timeSamples - 1);
 
@@ -171,16 +173,8 @@ std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>
 	unsigned int sampleRate,
 	double minProminence)
 {
-	//calculate mean of absolute residual signal
-	double absResidualMean = 0;
-	for (const auto &e : signal)
-	{
-		absResidualMean += std::abs(e);
-	}
-	absResidualMean /= (double)(signal.size());
-
 	//do CWT
-	const int level = 8;
+	const int level = 12;
 	CWT<float> transform("morlet", 6, level, sampleRate);
 	transform(signal);
 
@@ -219,20 +213,25 @@ std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>
 		}
 	}
 
+	//calculate mean of absolute residual signal
+	double absResidualMean = 0;
+	for (const auto &e : signal)
+	{
+		absResidualMean += pow(std::abs(e), 2);
+	}
+
 	//calculate synthesized residual absolute mean
 	double absSynthMean = 0;
 	for (const auto &e : synth)
 	{
-		absSynthMean += std::abs(e);
+		absSynthMean += pow(std::abs(e), 2);
 	}
-	absSynthMean /= (double)(synth.size());
 
 	//normalize
-	const float norm = absResidualMean / absSynthMean;
+	const float norm = sqrt(absResidualMean / absSynthMean);
+	
 	for (int i = 0; i < synth.size(); i++)
 	{
-		//tmp: for error signal
-		synth[i] *= norm;
 		for (int j = 0; j < level * CWT<float>::octaves; j++)
 		{
 			magnitudes[j][i] *= norm;
@@ -303,8 +302,8 @@ std::vector<std::vector<Diginstrument::Component<float>>> AnalyzerPlugin::subtra
 													   colorBlack));
 	}
 
-	vector<vector<float>> phases;
-	vector<vector<float>> amps;
+	vector<float> phase(signal.size(), 0);
+	vector<float> mag(signal.size(), 0);
 	std::vector<std::vector<Diginstrument::Component<float>>> res;
 	//tmp: visualization
 	const auto palette = Diginstrument::ColorPalette::generatePaletteTextures(maxima.size());
@@ -319,8 +318,6 @@ std::vector<std::vector<Diginstrument::Component<float>>> AnalyzerPlugin::subtra
 		const double scale = (parameter + sqrt(2 + parameter * parameter)) / (4 * M_PI * fr);
 		//perform a single center frequency CWT
 		const auto cfs = CWT<float>::singleScaleCWT(signal, scale, sampleRate);
-		phases.push_back(vector<float>(signal.size(), 0));
-		amps.push_back(vector<float>(signal.size(), 0));
 		//for each instance in time
 		for (int i = 0; i < cfs.size(); i++)
 		{
@@ -329,27 +326,38 @@ std::vector<std::vector<Diginstrument::Component<float>>> AnalyzerPlugin::subtra
 			//TODO: this has been the most successful equation, as it resulted in the same amp for both components in 440+50.wav
 			//I have no idea where the constant comes from; probably ties into the wavelet parameter
 			const float amp = (std::abs(normalizationConstant * c) / (sqrt(scale * sampleRate)));
-			amps.back()[i] = amp;
-			phases.back()[i] = std::arg(c);
+			mag[i] = amp;
+			phase[i] = std::arg(c);
 		}
-		//unwrap phase
-		Diginstrument::Phase<float>::unwrapInPlace(phases.back());
-		//partial initialization
-		vector<Diginstrument::Component<float>> partial;
-		partial.reserve(amps.size());
+			
+		//subtract extracted partial to get residual signal
 		for (int i = 0; i < signal.size(); i++)
 		{
-			//tmp: add partial to instrument
-			partial.emplace_back(fr, phases.back()[i], amps.back()[i]);
-			//subtract extracted partial to get residual signal
-			signal[i] -= cos(phases.back()[i]) * amps.back()[i];
+			signal[i] -= cos(phase[i]) * mag[i];
+		}
+		//unwrap phase
+		Diginstrument::Phase<float>::unwrapInPlace(phase);
+		//trim magnitudes
+		//TODO: is there a way to trim front too? include time?
+		unsigned int end = mag.size()-1;
+		//tmp
+		const float partialCutoff = 0.0005;
+		while(end>0 && mag[end]<partialCutoff) end--;
+		//tmp:
+		cout<<"resized partial "<<fr<<": "<<mag.size()<<" -> "<<end+1<<endl;
+
+		//construct partial
+		vector<Diginstrument::Component<float>> partial(end+1);
+		for (int i = 0; i < end+1; i++)
+		{
+			partial[i] = Diginstrument::Component<float>(fr, phase[i], mag[i]);
 			//tmp: visualization
-			if (i % 440 == 1 && amps.back()[i] > 0.001)
+			if (i % 440 == 1 && mag[i] > 0.001)
 			{
 				//calculate freq for visualization from diff of phase
-				const double freq = abs(((phases.back()[i] - phases.back()[i - 1]) * m_sampleBuffer.sampleRate()) / (2 * M_PI));
+				const double freq = abs(((phase[i] - phase[i - 1]) * m_sampleBuffer.sampleRate()) / (2 * M_PI));
 				visualization->addCustomItem(new QCustom3DItem("/home/mate/projects/lmms/plugins/Diginstrument/analyzer/resources/marker_mesh.obj",
-															   QVector3D(freq, amps.back()[i], (double)i / (double)sampleRate),
+															   QVector3D(freq, mag[i], (double)i / (double)sampleRate),
 															   QVector3D(0.01f, 0.01f, 0.01f),
 															   QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
 															   palette[j]));

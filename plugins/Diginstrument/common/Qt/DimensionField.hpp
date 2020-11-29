@@ -12,6 +12,7 @@ class DimensionField : public QWidget
   private:
     QLineEdit * label, *value, *minValue, *maxValue;
     QPushButton * deleteButton;
+    QCheckBox * shiftingBox;
 
   protected slots:
     void deleteButtonPressed()
@@ -26,6 +27,7 @@ class DimensionField : public QWidget
       value = new QLineEdit();
       minValue = new QLineEdit();
       maxValue = new QLineEdit();
+      shiftingBox = new QCheckBox("Shifting");
       deleteButton = new QPushButton( "X", this);
       deleteButton->setCursor( QCursor( Qt::PointingHandCursor ) );
       connect( deleteButton, SIGNAL( clicked() ),
@@ -49,6 +51,7 @@ class DimensionField : public QWidget
       rightContainer->setLayout(rightLayout);
       layout->addWidget(leftContainer);
       layout->addWidget(rightContainer);
+      layout->addWidget(shiftingBox);
       layout->addWidget(deleteButton);
       deleteButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
       layout->setMargin(0);
@@ -62,7 +65,7 @@ class DimensionField : public QWidget
 
     Diginstrument::Dimension getDimension() const
     {
-      return Diginstrument::Dimension(label->text().toStdString(), minValue->text().toDouble(), maxValue->text().toDouble());
+      return Diginstrument::Dimension(label->text().toStdString(), minValue->text().toDouble(), maxValue->text().toDouble(), shiftingBox->isChecked());
     }
 
   signals:

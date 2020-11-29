@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+#include <numeric>
+#include <algorithm>
 
 #include "Spectrum.hpp"
 
@@ -69,6 +71,10 @@ class PartialSet
         std::vector<std::vector<Diginstrument::Component<T>>> slice;
         for(const auto & p : this->partials)
         {
+            if(p.size()<=startFrame)
+            {
+                continue;
+            }
             if(p.size()<=startFrame+frames)
             {
                 slice.emplace_back(p.begin()+startFrame, p.end());
@@ -87,5 +93,34 @@ class PartialSet
             res.push_back(p.front());
         }
         return res;
+    }
+
+    T getFundamentalFrequency() const
+    {
+        constexpr T maxDistance = 0.1;
+        //initialize
+        std::vector<std::pair<T, unsigned int>> harmonicScores;
+        harmonicScores.reserve(partials.size());
+        for(const auto & partial: partials)
+        {
+            harmonicScores.emplace_back(partial.front().frequency, 0);
+        }
+        //sort by frequency
+        std::sort(harmonicScores.begin(), harmonicScores.end(), [](const auto & left, const auto & right){return left.first<right.first;});
+        //calculate overtone numbers
+        for(int i = 0; i<harmonicScores.size(); i++)
+        {
+            //consider every higher frequency partial
+            for(int j = i+1; j<harmonicScores.size(); j++)
+            {
+                //see how far they are from being an overtone
+                const T ratio = harmonicScores[j].first / harmonicScores[i].first;
+                const T distance = ratio - floor(ratio);
+                if(distance<maxDistance) harmonicScores[i].second++;
+            }
+        }
+        //sort by score
+        std::sort(harmonicScores.begin(), harmonicScores.end(), [](const auto & left, const auto & right){return left.second>right.second;});
+        return harmonicScores.front().first;
     }
 };

@@ -29,7 +29,6 @@ extern "C"
 DiginstrumentPlugin::DiginstrumentPlugin(InstrumentTrack *_instrument_track) : Instrument(_instrument_track, &diginstrument_plugin_descriptor)
 {
 	/*TODO */
-	synth.setSampleRate(Engine::mixer()->processingSampleRate());
 }
 
 DiginstrumentPlugin::~DiginstrumentPlugin() {}
@@ -74,7 +73,7 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 	auto residual = interpolator.getResidual(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
 	vector<float> audioData = this->synth.playNote(partials, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
 	//vector<float> audioData(noteHandle->framesLeftForCurrentPeriod(),0);
-	vector<float> residualData = this->synth.playResidual(residual, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
+	vector<float> residualData = this->synth.playResidualByFrequency(residual, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
 
 	//tmp
 	for(int i = 0; i<residualData.size(); i++)
@@ -111,7 +110,6 @@ QString DiginstrumentPlugin::fullDisplayName() const
 void DiginstrumentPlugin::sampleRateChanged()
 {
 	/*TODO*/
-	this->synth.setSampleRate(Engine::mixer()->processingSampleRate());
 }
 
 bool DiginstrumentPlugin::setInstrumentFile(const QString & fileName)
@@ -162,9 +160,9 @@ QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfa
 		//coordinates.back() = z;
 		
 		int index = 0;
-		//TODO: fix after residual
+		//TODO: fix after residual change
 		//const auto spectrum = interpolator.getSpectrum(coordinates);
-		const auto residualSlice = interpolator.getResidual(coordinates, startFrame, 1);
+		/*const auto residualSlice = interpolator.getResidual(coordinates, startFrame, 1);
 		for (int j = 0; j < freqSamples; j++) {
 			float x = qMin(maxFreq, (j * stepX + minFreq));
 			(*dataRow)[index++].setPosition(QVector3D(x, 0, z));
@@ -176,7 +174,7 @@ QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfa
 				if(c.frequency<=minFreq || c.frequency>=maxFreq) continue;
 				(*dataRow)[std::round((c.frequency-minFreq)/((maxFreq-minFreq)/(float)freqSamples))].setPosition(QVector3D(c.frequency,c.amplitude, z));
 			}
-		}
+		}*/
 		*data<<dataRow;
 	}
 
@@ -193,6 +191,7 @@ std::vector<Diginstrument::Component<float>> DiginstrumentPlugin::getPartialVisu
 	{
 		for(int i = 1; i<partial.size(); i+=sampleRate/pointsPerSeconds)
 		{
+			
 			const double freq = abs(((partial[i].phase - partial[i-1].phase) * sampleRate) / (2*M_PI));
 			//pretty bad, i use phase as time
 			res.emplace_back(freq, (double)i/(double)sampleRate, partial[i].amplitude);

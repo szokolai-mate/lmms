@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Residual.hpp"
+#include "ResidualByFrequency.hpp"
 #include "PartialSet.hpp"
 #include "toJSON.hpp"
 #include "Dimension.h"
@@ -11,9 +11,9 @@ template <typename T>
 class Instrument
 {
   public:
-    void add(Residual<T> && residual)
+    void add(ResidualByFrequency<T> && ResidualByFrequency)
     {
-        this->residuals.push_back(std::move(residual));
+        this->residuals.push_back(std::move(ResidualByFrequency));
     }
 
     void add(PartialSet<T> && partialSet)
@@ -21,7 +21,7 @@ class Instrument
         partialSets.push_back(std::move(partialSet));
     }
 
-    const vector<Residual<T>> & getResiduals() const
+    const vector<ResidualByFrequency<T>> & getResiduals() const
     {
         return residuals;
     }
@@ -61,7 +61,7 @@ class Instrument
         res.reserve(object["residuals"].size());
         for(const auto & s : object["residuals"])
         {
-            res.add(Diginstrument::JSONConverter<T>::residualFromJSON(s));
+            res.add(Diginstrument::JSONConverter<T>::residualByFrequencyFromJSON(s));
         }
         res.reserve(object["partial_sets"].size());
         for(const auto & p : object["partial_sets"])
@@ -75,7 +75,7 @@ class Instrument
     std::vector<Diginstrument::Dimension> dimensions;
 
   private:
-    std::vector<Residual<T>> residuals;
+    std::vector<ResidualByFrequency<T>> residuals;
     std::vector<PartialSet<T>> partialSets;
 };
 };

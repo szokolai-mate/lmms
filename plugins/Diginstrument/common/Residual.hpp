@@ -75,4 +75,9 @@ public:
 
         return Residual<T>(std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<T>>>>(itStart, itEnd), this->labels);
     }
+
+    std::pair<unsigned int, Diginstrument::Component<T>> getNextPoint(unsigned int frame, T frequency)
+    {
+        
+    }
 };

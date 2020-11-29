@@ -1,7 +1,10 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
+#include <map>
 #include "SplineSpectrum.hpp"
+#include "Residual.hpp"
+#include "ResidualByFrequency.hpp"
 #include "Dimension.h"
 
 using ordered_json = nlohmann::basic_json<nlohmann::ordered_map, std::vector, std::string, bool, std::int64_t, std::uint64_t, float>;
@@ -224,6 +227,43 @@ class JSONConverter
             if(e.value().is_number()) labels.emplace_back(e.key(), e.value());
         }
         return Residual<T>(std::move(momentarySpectra), std::move(labels));
+    }
+
+    static ResidualByFrequency<T> residualByFrequencyFromJSON(ordered_json object)
+    {
+        std::map<T, std::vector<std::pair<unsigned int, Diginstrument::Component<T>>>> channels;
+        vector<pair<string, T>> labels;
+        for(auto & s : object["momentary_spectra"])
+        {
+            //std::vector<Diginstrument::Component<T>> components;
+            //components.reserve(s["components"].size());
+            for(const auto & c : s["components"])
+            {
+                auto it = channels.find(c[0]);
+                if(it==channels.end())
+                {
+                    //channel not in map, insert first frame
+                    std::vector<std::pair<unsigned int, Diginstrument::Component<T>>> newChannel{make_pair(s["frame"],Diginstrument::Component<T>(c[0], c[1], c[2]))};
+                    //channels.insert(make_pair(c[0], auto({make_pair(s["frame"], {{c[0], c[1], c[2]}})})));
+                    channels.insert(make_pair(c[0], std::move(newChannel)));
+                }
+                else
+                {
+                    //insert new frame
+                    it->second.emplace_back(s["frame"], Diginstrument::Component<T>(c[0], c[1], c[2]));
+                }
+            }
+        }
+        for(auto & e : object.items())
+        {
+            if(e.value().is_number()) labels.emplace_back(e.key(), e.value());
+        }
+        std::vector<std::vector<std::pair<unsigned int, Diginstrument::Component<T>>>> res;
+        for (auto & c : channels)
+        {
+            res.push_back(std::move(c.second));
+        }
+        return ResidualByFrequency<T>(std::move(res), std::move(labels));
     }
 
     static PartialSet<T> partialSetFromJSON(ordered_json object)

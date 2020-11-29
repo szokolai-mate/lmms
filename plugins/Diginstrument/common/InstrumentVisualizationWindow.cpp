@@ -130,6 +130,7 @@ void Diginstrument::InstrumentVisualizationWindow::setDimensions(std::vector<Dim
     {
         delete s;
     }
+    coordinateSliders.clear();
 
     for(auto & d : dimensions)
     {
