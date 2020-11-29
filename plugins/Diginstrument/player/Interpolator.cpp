@@ -35,15 +35,15 @@ PartialSet<T> Diginstrument::Interpolator<T>::getPartials(const std::vector<T> &
 }
 
 template <typename T>
-ResidualByFrequency<T> Diginstrument::Interpolator<T>::getResidual(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames)
+Residual<T> Diginstrument::Interpolator<T>::getResidual(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames)
 {
     return residual.processIntoRoot(coordinates,
-            [this, startFrame, frames](const ResidualByFrequency<T> &left, const ResidualByFrequency<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const unsigned int dimension)
-            ->ResidualByFrequency<T>
+            [this, startFrame, frames](const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const unsigned int dimension)
+            ->Residual<T>
             {
                 return interpolateResidual(left.getSlice(startFrame, frames), right.getSlice(startFrame, frames), target, leftLabel, rightLabel, dimensions[dimension].shifting);
             },
-            [startFrame, frames](const ResidualByFrequency<T> & single)->ResidualByFrequency<T> 
+            [startFrame, frames](const Residual<T> & single)->Residual<T> 
             {
                 return single.getSlice(startFrame, frames);
             }
@@ -239,7 +239,7 @@ PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const Partia
 }
 
 template <typename T>
-ResidualByFrequency<T> Diginstrument::Interpolator<T>::interpolateResidual(const ResidualByFrequency<T> &left, const ResidualByFrequency<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting)
+Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting)
 {
     //TODO
     if(right.get().size()==0) return left;
@@ -379,7 +379,7 @@ ResidualByFrequency<T> Diginstrument::Interpolator<T>::interpolateResidual(const
     //TODO: remainder
 
     //TODO: labels
-    return ResidualByFrequency<T>(res,{});
+    return Residual<T>(res,{});
 }
 
 template <typename T>
@@ -398,7 +398,7 @@ void Diginstrument::Interpolator<T>::addPartialSets(const std::vector<PartialSet
 }
 
 template <typename T>
-void Diginstrument::Interpolator<T>::addResiduals(const std::vector<ResidualByFrequency<T>> & residuals)
+void Diginstrument::Interpolator<T>::addResiduals(const std::vector<Residual<T>> & residuals)
 {
     //TODO:test, check, better
     for(const auto & r : residuals)

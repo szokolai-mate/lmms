@@ -73,7 +73,7 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 	auto residual = interpolator.getResidual(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
 	vector<float> audioData = this->synth.playNote(partials, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
 	//vector<float> audioData(noteHandle->framesLeftForCurrentPeriod(),0);
-	vector<float> residualData = this->synth.playResidualByFrequency(residual, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
+	vector<float> residualData = this->synth.playResidual(residual, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
 
 	//tmp
 	for(int i = 0; i<residualData.size(); i++)

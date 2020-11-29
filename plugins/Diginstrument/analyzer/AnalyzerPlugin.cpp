@@ -83,13 +83,14 @@ std::string AnalyzerPlugin::analyzeSample(const QString &_audio_file, vector<pai
 		}
 	}
 
-	for (const auto & momentarySpectrum : res)
-	{
-		for(const auto & c : momentarySpectrum.second)
-		{
-			synth[momentarySpectrum.first]+=cos(c.phase)*c.amplitude;
-		}
-	}
+	for(const auto & channel : res)
+    {
+        for(const auto & frame : channel)
+        {
+            synth[frame.first] += cos(frame.second.phase) * frame.second.amplitude; 
+        }
+    }
+
 	/*for(auto s : synth)
 	{
 		cout<<std::fixed<<s<<" ";
@@ -168,7 +169,7 @@ void AnalyzerPlugin::writeInstrumentToFile(std::string filename)
 	}
 }
 
-std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>>> AnalyzerPlugin::residualAnalysis(
+std::vector<std::vector<std::pair<unsigned int, Diginstrument::Component<float>>>> AnalyzerPlugin::residualAnalysis(
 	const std::vector<double> &signal,
 	unsigned int sampleRate,
 	double minProminence)
@@ -239,18 +240,26 @@ std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>
 	}
 
 	//construct res
-	std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>>> res;
-	for (int i = 0; i < signal.size(); i++)
+	std::vector<std::vector<std::pair<unsigned int, Diginstrument::Component<float>>>> res;
+	for (int j = 0; j < level * CWT<float>::octaves; j++)
 	{
-		std::vector<Diginstrument::Component<float>> timeInstance;
-		for (int j = 0; j < level * CWT<float>::octaves; j++)
+		std::vector<std::pair<unsigned int, Diginstrument::Component<float>>> channel;
+		for (int i = 0; i < signal.size(); i++) 
 		{
 			if (magnitudes[j][i] > minProminence)
 			{
-				timeInstance.emplace_back(1.0 / transform.getScale(j).second, unwrappedPhases[j][i], magnitudes[j][i]);
+				channel.push_back(
+					std::make_pair(
+						i,
+						Diginstrument::Component(
+							1.0f / (float) transform.getScale(j).second,
+							unwrappedPhases[j][i],
+							magnitudes[j][i])
+					)
+				);
 			}
 		}
-		if(timeInstance.size()>0) res.emplace_back(i , std::move(timeInstance));
+		if(channel.size()>0) res.emplace_back(std::move(channel));
 	}
 
 	//tmp: visualize

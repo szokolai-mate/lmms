@@ -4,7 +4,6 @@
 #include <math.h>
 
 #include "../common/Residual.hpp"
-#include "../common/ResidualByFrequency.hpp"
 #include "../common/PartialSet.hpp"
 
 namespace Diginstrument
@@ -15,6 +14,5 @@ class Synthesizer
 public:
   std::vector<float> playNote(const PartialSet<T> & slice, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate);
   std::vector<float> playResidual(const Residual<T> & residual, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate);
-  std::vector<float> playResidualByFrequency(const ResidualByFrequency<T> & residual, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate);
 };
 }; // namespace Diginstrument

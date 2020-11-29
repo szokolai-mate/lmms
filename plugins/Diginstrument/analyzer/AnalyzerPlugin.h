@@ -68,7 +68,7 @@ private:
   SampleBuffer m_sampleBuffer;
   Diginstrument::Instrument<float> inst;
   
-  std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<float>>>> residualAnalysis(const std::vector<double> &signal,
+  std::vector<std::vector<std::pair<unsigned int, Diginstrument::Component<float>>>> residualAnalysis(const std::vector<double> &signal,
                         unsigned int sampleRate,
                         double minProminence = 0);
 
