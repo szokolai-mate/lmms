@@ -4,10 +4,16 @@
 #include "AnalyzerPlugin.h"
 #include "../common/InstrumentVisualizationWindow.h"
 #include "../common/Qt/DimensionField.hpp"
+#include "../common/Qt/NoteField.hpp"
 
 #include <QPushButton>
 #include <QTextEdit>
 
+/**
+ * @brief The view class of the analyzer plugin.
+ * 
+ * Provides the GUI for the analyzer plugin with QT.
+ */
 class AnalyzerView : public ToolPluginView
 {
     Q_OBJECT
@@ -15,20 +21,16 @@ class AnalyzerView : public ToolPluginView
     AnalyzerView( ToolPlugin * _parent );
 	  virtual ~AnalyzerView();
 
-    /*TODO*/
-
   protected slots:
     void openAudioFile();
     void writeInstrumentToFile();
-    void copyTextEditToClipboard();
     void showVisualization();
     void addDimension();
     void deleteDimensionField(DimensionField * field);
-    void updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates);
+    void deleteNote(NoteField * field);
+    void updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, std::vector<float> coordinates);
 
   private:
-	  virtual void modelChanged( void );
-
     QPushButton * m_openAudioFileButton;
     QPushButton * m_openVisualizationButton;
     QPushButton * m_addDimensionButton;
@@ -39,9 +41,13 @@ class AnalyzerView : public ToolPluginView
     QLineEdit * m_residualCutoffField;
     QList<DimensionField*> dimensionFields;
     QWidget * dimensionFieldsContainer;
-    QLineEdit * m_fileNameField;
     QPushButton * m_saveToFileButton;
+    QList<NoteField*> noteFields;
+    QWidget * noteFieldsContainer;
     
     Diginstrument::InstrumentVisualizationWindow * visualization;
-    /*TODO*/
+
+    void lockDimensions();
+    void unlockDimensions();
+    void updateNoteFields();
 };

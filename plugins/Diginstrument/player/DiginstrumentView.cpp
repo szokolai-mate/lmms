@@ -70,29 +70,20 @@ void DiginstrumentView::showInstumentVisualization()
   //TODO: defaults/saving
   //TODO: this may not properly give the dimensions!
   visualization->setDimensions(castModel<DiginstrumentPlugin>()->instrument.dimensions);
-
-  updateVisualizationData(0,3000,20,22000,100,100, /*TODO: Default values TMP*/ {400});
+  updateVisualizationData(0,3000,20,22000,100/*TODO default values*/, {});
   visualization->show();
-  //is this even useful?
-  //visualization->adjustSize();
 }
 
-void DiginstrumentView::updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates)
+void DiginstrumentView::updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, std::vector<float> coordinates)
 {
-  visualization->setSurfaceData(castModel<DiginstrumentPlugin>()->getInstrumentSurfaceData(minTime/1000.0f,maxTime/1000.0f,minFreq,maxFreq,timeSamples,freqSamples, coordinates));
-  visualization->removeCustomItems();
-  int j = 0;
-  const auto partials = castModel<DiginstrumentPlugin>()->getPartialVisualization(minTime, maxTime, minFreq, maxFreq, /*tmp*/ 100, coordinates);
-  const auto palette = Diginstrument::ColorPalette::generatePaletteTextures(partials.size());
-  for(const auto & c : partials)
-  {
-    visualization->addCustomItem(new QCustom3DItem("/home/mate/projects/lmms/plugins/Diginstrument/analyzer/resources/marker_mesh.obj",
-												QVector3D(c.frequency, c.amplitude,c.phase),
-												QVector3D(0.01f, 0.01f, 0.01f),
-												QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
-												palette[j]));
-    j++;
-  }
+  //TODO: TMP: smapleRate
+  const int sampleRate = 44100;
+  visualization->setSurfaceData(visualization->getInstrumentSurfaceData(minTime/1000.0f,maxTime/1000.0f,minFreq,maxFreq,timeSamples, sampleRate, coordinates, castModel<DiginstrumentPlugin>()->interpolator));
+  visualization->setPartialData(
+    visualization->getInstrumentPartialData(minTime/1000.0f,maxTime/1000.0f,minFreq,maxFreq, sampleRate, coordinates, castModel<DiginstrumentPlugin>()->interpolator),
+    (minTime/1000.0f)*(float)sampleRate,
+    sampleRate
+  );
 }
 
 void DiginstrumentView::setDimensions()

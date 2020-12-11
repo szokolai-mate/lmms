@@ -10,7 +10,7 @@ using namespace Diginstrument;
  * Interpolate a time-slice of the partials corresponding to the given coordinates, frame offset and amount of frames
  */
 template <typename T>
-PartialSet<T> Diginstrument::Interpolator<T>::getPartials(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames)
+PartialSet<T> Diginstrument::Interpolator<T>::getPartials(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames) const
 {
     return partials.processIntoRoot(coordinates,
             [this, startFrame, frames](const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const unsigned int dimension)
@@ -19,9 +19,9 @@ PartialSet<T> Diginstrument::Interpolator<T>::getPartials(const std::vector<T> &
                 //TODO: better slicing detection
                 if(left.get().size()>0 && left.get().front().size()>frames)
                 {
-                    return interpolatePartialSet(left.getSlice(startFrame, frames), right.getSlice(startFrame, frames), target, leftLabel, rightLabel, dimensions[dimension].shifting);
+                    return interpolatePartialSet(left.getSlice(startFrame, frames), right.getSlice(startFrame, frames), target, leftLabel, rightLabel, /*TMP: unused parameter*/ false);
                 }
-                return interpolatePartialSet(left, right, target, leftLabel, rightLabel, dimensions[dimension].shifting);
+                return interpolatePartialSet(left, right, target, leftLabel, rightLabel, /*TMP: unused parameter*/ false);
             },
             [startFrame, frames](const PartialSet<T> & single)->PartialSet<T> 
             {
@@ -35,7 +35,7 @@ PartialSet<T> Diginstrument::Interpolator<T>::getPartials(const std::vector<T> &
 }
 
 template <typename T>
-Residual<T> Diginstrument::Interpolator<T>::getResidual(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames)
+Residual<T> Diginstrument::Interpolator<T>::getResidual(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames) const
 {
     return residual.processIntoRoot(coordinates,
             [this, startFrame, frames](const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const unsigned int dimension)
@@ -51,7 +51,7 @@ Residual<T> Diginstrument::Interpolator<T>::getResidual(const std::vector<T> &co
 }
 
 template <typename T>
-PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool /*tmp*/ shifting2)
+PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool /*tmp*/ shifting2) const
 {
     //TODO: remove shifting parameter
     //TODO
@@ -239,7 +239,7 @@ PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const Partia
 }
 
 template <typename T>
-Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting)
+Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting) const
 {
     //TODO
     if(right.get().size()==0) return left;
@@ -398,6 +398,19 @@ void Diginstrument::Interpolator<T>::addPartialSets(const std::vector<PartialSet
 }
 
 template <typename T>
+void Diginstrument::Interpolator<T>::addPartialSet(const PartialSet<T> & partialSet)
+{
+    //TODO:test, check, better
+    vector<T> labels;
+    for(const auto & l : partialSet.getLabels())
+    {
+        labels.push_back(l.second);
+    }
+    partials.insert(partialSet, labels);
+}
+
+
+template <typename T>
 void Diginstrument::Interpolator<T>::addResiduals(const std::vector<Residual<T>> & residuals)
 {
     //TODO:test, check, better
@@ -412,6 +425,17 @@ void Diginstrument::Interpolator<T>::addResiduals(const std::vector<Residual<T>>
     }
 }
 
+template <typename T>
+void Diginstrument::Interpolator<T>::addResidual(const Residual<T> & residual)
+{
+    //TODO:test, check, better
+    vector<T> labels;
+    for(const auto & l : residual.getLabels())
+    {
+        labels.push_back(l.second);
+    }
+    this->residual.insert(residual, labels);
+}
 
 template <typename T>
 void Diginstrument::Interpolator<T>::clear()

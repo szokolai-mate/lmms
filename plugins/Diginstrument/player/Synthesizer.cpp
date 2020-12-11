@@ -1,8 +1,5 @@
 #include "Synthesizer.h"
 
-//tmp
-#include <iostream>
-
 template <typename T>
 std::vector<float> Diginstrument::Synthesizer<T>::playNote(const PartialSet<T> & slice, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
 {
@@ -25,13 +22,9 @@ std::vector<float> Diginstrument::Synthesizer<T>::playResidual(const Residual<T>
     {
         for(const auto & frame : channel)
         {
-            //tmp: debug
-            //std::cout<<std::fixed<<frame.first<<" "<<frame.second.frequency<<" "<<frame.second.phase<<" "<<frame.second.amplitude<<std::endl;
             if(frame.first<offset || frame.first>offset+frames)
             {
-                //TODO
-                //tmp:
-                //std::cout<<"UNIMPLEMENTED: residual out of bounds in synth"<<std::endl;
+                //TODO: EXCEPTION - should not happen
             }
             else
             {

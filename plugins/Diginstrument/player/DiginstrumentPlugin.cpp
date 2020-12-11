@@ -142,45 +142,6 @@ bool DiginstrumentPlugin::loadInstrumentFile()
 	else return false;
 }
 
-QtDataVisualization::QSurfaceDataArray * DiginstrumentPlugin::getInstrumentSurfaceData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates)
-{
-	//TODO: better/refactoring
-	coordinates.push_back(0);
-
-	const float stepX = (maxFreq - minFreq) / float(freqSamples - 1);
-    const float stepZ = (maxTime - minTime) / float(timeSamples - 1);
-
-	QSurfaceDataArray * data = new QSurfaceDataArray;
-	data->reserve(timeSamples);
-	for(int i = 0; i<timeSamples;i++)
-	{
-		QSurfaceDataRow *dataRow = new QSurfaceDataRow(freqSamples);
-		float z = qMin(maxTime, (i * stepZ + minTime));
-		unsigned int startFrame = /*TMP: sampleRate*/ 44100*z;
-		//coordinates.back() = z;
-		
-		int index = 0;
-		//TODO: fix after residual change
-		//const auto spectrum = interpolator.getSpectrum(coordinates);
-		/*const auto residualSlice = interpolator.getResidual(coordinates, startFrame, 1);
-		for (int j = 0; j < freqSamples; j++) {
-			float x = qMin(maxFreq, (j * stepX + minFreq));
-			(*dataRow)[index++].setPosition(QVector3D(x, 0, z));
-		}
-		if(residualSlice.size()>0)
-		{
-			for(const auto & c : residualSlice.get().front().second)
-			{
-				if(c.frequency<=minFreq || c.frequency>=maxFreq) continue;
-				(*dataRow)[std::round((c.frequency-minFreq)/((maxFreq-minFreq)/(float)freqSamples))].setPosition(QVector3D(c.frequency,c.amplitude, z));
-			}
-		}*/
-		*data<<dataRow;
-	}
-
-	return data;
-}
-
 std::vector<Diginstrument::Component<float>> DiginstrumentPlugin::getPartialVisualization(float minTimeMilisec, float maxTimeMilisec, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<float> coordinates)
 {
 	std::vector<Diginstrument::Component<float>> res;

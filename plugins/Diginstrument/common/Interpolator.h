@@ -15,8 +15,8 @@ template <typename T>
 class Interpolator
 {
 public:
-  PartialSet<T> getPartials(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames);
-  Residual<T> getResidual(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames);
+  PartialSet<T> getPartials(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames) const;
+  Residual<T> getResidual(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames) const;
 
   void clear();
 
@@ -24,7 +24,9 @@ public:
   const std::vector<Dimension> & getDimensions() const;
 
   void addPartialSets(const std::vector<PartialSet<T>> & partialSets);
-  void addResiduals(const std::vector<Residual<T>> & partialSets);
+  void addPartialSet(const PartialSet<T> & partialSet);
+  void addResiduals(const std::vector<Residual<T>> & residuals);
+  void addResidual(const Residual<T> & residual);
 
   Interpolator() {}
 
@@ -33,7 +35,7 @@ private:
   MultidimensionalNeighbourMap<T, PartialSet<T>> partials;
   std::vector<Dimension> dimensions;
 
-  PartialSet<T> interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting);
-  Residual<T> interpolateResidual(const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting);
+  PartialSet<T> interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting) const;
+  Residual<T> interpolateResidual(const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting) const;
 };
 }; // namespace Diginstrument

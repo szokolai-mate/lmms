@@ -19,12 +19,10 @@ class DiginstrumentView : public InstrumentView
     DiginstrumentView( Instrument * _instrument, QWidget * _parent );
 	  virtual ~DiginstrumentView();
 
-    /*TODO*/
-
   protected slots:
     void showInstumentVisualization();
     void openInstrumentFile();
-    void updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates);
+    void updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, std::vector<float> coordinates);
     void updateCoordinates();
 
   private:

@@ -11,9 +11,19 @@ template <typename T>
 class Instrument
 {
   public:
+    void add(const Residual<T> & Residual)
+    {
+        this->residuals.push_back(Residual);
+    }
+
     void add(Residual<T> && Residual)
     {
         this->residuals.push_back(std::move(Residual));
+    }
+
+    void add(const PartialSet<T> & partialSet)
+    {
+        partialSets.push_back(partialSet);
     }
 
     void add(PartialSet<T> && partialSet)

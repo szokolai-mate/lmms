@@ -97,6 +97,8 @@ class PartialSet
 
     T getFundamentalFrequency() const
     {
+        //tmp
+        if(partials.empty()) return 0;
         constexpr T maxDistance = 0.1;
         //initialize
         std::vector<std::pair<T, unsigned int>> harmonicScores;

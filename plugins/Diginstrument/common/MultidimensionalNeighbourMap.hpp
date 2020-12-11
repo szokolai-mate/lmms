@@ -78,9 +78,9 @@ template <typename K, typename V>
 class MultidimensionalNeighbourMap
 {
 public:
-  std::vector<std::vector<V>> getNeighbours(const std::vector<K> & coordinates);
-  std::vector<std::vector<V>> getNeighbours(const std::vector<K> & coordinates, std::vector<std::vector<K>> & labels);
-  V processIntoRoot(const std::vector<K> & coordinates, std::function<V(const V&, const V&, K, K, K, unsigned int)> processor, std::function<V(const V&)> singleProcessor);
+  std::vector<std::vector<V>> getNeighbours(const std::vector<K> & coordinates) const;
+  std::vector<std::vector<V>> getNeighbours(const std::vector<K> & coordinates, std::vector<std::vector<K>> & labels) const;
+  V processIntoRoot(const std::vector<K> & coordinates, std::function<V(const V&, const V&, K, K, K, unsigned int)> processor, std::function<V(const V&)> singleProcessor) const;
   void insert(const V &value, const std::vector<K> &coordinates);
   unsigned int getDimensions() const { return this->dimensions; }
   void clear();
@@ -188,7 +188,7 @@ void MultidimensionalNeighbourMap<K, V>::insert(const V &value, const std::vecto
 }
 
 template <typename K, typename V>
-std::vector<std::vector<V>> MultidimensionalNeighbourMap<K, V>::getNeighbours(const std::vector<K> & coordinates)
+std::vector<std::vector<V>> MultidimensionalNeighbourMap<K, V>::getNeighbours(const std::vector<K> & coordinates) const
 {
   /*dimension check*/
   if(this->dimensions != coordinates.size()) {/*TODO: exception?*/ return {}; }
@@ -200,7 +200,7 @@ std::vector<std::vector<V>> MultidimensionalNeighbourMap<K, V>::getNeighbours(co
 
 /*labels is the per-level structure of the search tree, without the distinction of unary or binary nodes*/
 template <typename K, typename V>
-std::vector<std::vector<V>> MultidimensionalNeighbourMap<K, V>::getNeighbours(const std::vector<K> & coordinates, std::vector<std::vector<K>> & labels)
+std::vector<std::vector<V>> MultidimensionalNeighbourMap<K, V>::getNeighbours(const std::vector<K> & coordinates, std::vector<std::vector<K>> & labels) const
 {
   /*dimension check*/
   if(this->dimensions != coordinates.size()) {/*TODO: exception?*/ return {}; }
@@ -281,7 +281,7 @@ void MultidimensionalNeighbourMap<K, V>::clear()
 }
 
 template <typename K, typename V>
-V MultidimensionalNeighbourMap<K, V>::processIntoRoot(const std::vector<K> & coordinates, std::function<V(const V&, const V&, K, K, K, unsigned int)> processor, std::function<V(const V&)> singleProcessor)
+V MultidimensionalNeighbourMap<K, V>::processIntoRoot(const std::vector<K> & coordinates, std::function<V(const V&, const V&, K, K, K, unsigned int)> processor, std::function<V(const V&)> singleProcessor) const
 {
   //starting from root
   if(coordinates.size() < dimensions)

@@ -2,7 +2,7 @@
 
 #include "DiginstrumentView.h"
 #include "Synthesizer.h"
-#include "Interpolator.h"
+#include "../common/Interpolator.h"
 
 #include "Instrument.h"
 #include "InstrumentTrack.h"
@@ -64,7 +64,7 @@ public:
     return true;
   }
 
-  QtDataVisualization::QSurfaceDataArray * getInstrumentSurfaceData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int freqSamples, std::vector<float> coordinates);
+  //TODO: move this to window too
   std::vector<Diginstrument::Component<float>> getPartialVisualization(float minTime, float maxTime, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<float> coordinates);
 
 protected:
