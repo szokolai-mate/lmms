@@ -35,7 +35,7 @@ private:
   MultidimensionalNeighbourMap<T, PartialSet<T>> partials;
   std::vector<Dimension> dimensions;
 
-  PartialSet<T> interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting) const;
-  Residual<T> interpolateResidual(const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting) const;
+  PartialSet<T> interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel) const;
+  Residual<T> interpolateResidual(const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel) const;
 };
 }; // namespace Diginstrument

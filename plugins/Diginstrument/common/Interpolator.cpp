@@ -1,8 +1,5 @@
 #include "Interpolator.h"
 
-//tmp
-#include <iostream>
-
 using namespace std;
 using namespace Diginstrument;
 
@@ -13,15 +10,15 @@ template <typename T>
 PartialSet<T> Diginstrument::Interpolator<T>::getPartials(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames) const
 {
     return partials.processIntoRoot(coordinates,
-            [this, startFrame, frames](const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const unsigned int dimension)
+            [this, startFrame, frames](const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel)
             ->PartialSet<T>
             {
                 //TODO: better slicing detection
                 if(left.get().size()>0 && left.get().front().size()>frames)
                 {
-                    return interpolatePartialSet(left.getSlice(startFrame, frames), right.getSlice(startFrame, frames), target, leftLabel, rightLabel, /*TMP: unused parameter*/ false);
+                    return interpolatePartialSet(left.getSlice(startFrame, frames), right.getSlice(startFrame, frames), target, leftLabel, rightLabel);
                 }
-                return interpolatePartialSet(left, right, target, leftLabel, rightLabel, /*TMP: unused parameter*/ false);
+                return interpolatePartialSet(left, right, target, leftLabel, rightLabel);
             },
             [startFrame, frames](const PartialSet<T> & single)->PartialSet<T> 
             {
@@ -38,10 +35,10 @@ template <typename T>
 Residual<T> Diginstrument::Interpolator<T>::getResidual(const std::vector<T> &coordinates, unsigned int startFrame, unsigned int frames) const
 {
     return residual.processIntoRoot(coordinates,
-            [this, startFrame, frames](const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const unsigned int dimension)
+            [this, startFrame, frames](const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel)
             ->Residual<T>
             {
-                return interpolateResidual(left.getSlice(startFrame, frames), right.getSlice(startFrame, frames), target, leftLabel, rightLabel, dimensions[dimension].shifting);
+                return interpolateResidual(left.getSlice(startFrame, frames), right.getSlice(startFrame, frames), target, leftLabel, rightLabel);
             },
             [startFrame, frames](const Residual<T> & single)->Residual<T> 
             {
@@ -51,35 +48,29 @@ Residual<T> Diginstrument::Interpolator<T>::getResidual(const std::vector<T> &co
 }
 
 template <typename T>
-PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool /*tmp*/ shifting2) const
+PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const PartialSet<T> &left, const PartialSet<T> &right, const T &target, const T &leftLabel, const T &rightLabel) const
 {
-    //TODO: remove shifting parameter
-    //TODO
-    //tmp: i may still need to attenuate!
-    if(left.empty()) return right;
-    if(right.empty()) return left;
-    //TMP: copied from spectrum
+    if(left.empty() && right.empty()) return PartialSet<T>({},{});
+
     vector<Match> matches;
     vector<unsigned int> unmatchedLeft;
     vector<unsigned int> unmatchedRight;
 
-    //get FFs
+    //get FFs and decide whether pitch shifting is applied in this interpolation
     const T FFl = left.getFundamentalFrequency();
     const T FFr = right.getFundamentalFrequency();
 
-    //tmp: local shifting
-    //this looks GOOD!
     bool shifting = true;
     if(abs(FFl/FFr-1) < 0.02)
     {
         shifting = false;
     }
-    if(/*shifting && */!right.empty() && !left.empty())
+    //match partials
+    if(!right.empty() && !left.empty())
     {
-        //TODO: actually get fundamental frequency
         //fundamental frequency ratio
         const double componentRatio = FFl/FFr;
-        const double maxRatioDeviance = 0.02;
+        constexpr double maxRatioDeviance = 0.02;
 
         matches = PeakMatcher<T>::matchPeaks(left.getMatchables(), right.getMatchables(), unmatchedLeft, unmatchedRight,
             [componentRatio, maxRatioDeviance](const Diginstrument::Component<T> & left, const Diginstrument::Component<T>& right)->double
@@ -90,15 +81,13 @@ PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const Partia
         );
     }
 
-    //TODO: refactor whole process; too wordy now
-
     //calculate shifting metrics
     const T rightWeight = (target-leftLabel) / (rightLabel - leftLabel);
     const T leftWeight = 1.0f - rightWeight;
     const double leftRatio = target/leftLabel;
     const double rightRatio = target/rightLabel;
-    //todo: labels or sample rate needed?
-    //TODO: only if not empty
+
+    //construct new partials based on matches
     PartialSet<T> res;
     for(const auto & match : matches)
     {
@@ -110,70 +99,15 @@ PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const Partia
         {
             const Diginstrument::Component<T> leftComponent = left.get()[match.left][i];
             const Diginstrument::Component<T> rightComponent = right.get()[match.right][i];
-            //TMP: simple linear interpolation and avg amp
-            //TODO: frequency! sliding? what?!
             partial.emplace_back(leftComponent.frequency*leftWeight+rightComponent.frequency*rightWeight ,
              (leftComponent.phase*leftWeight+rightComponent.phase*rightWeight),
              (leftComponent.amplitude*leftWeight+rightComponent.amplitude*rightWeight)
             );
         }
-        //flute not good for this, no trimming
-        //then process the remainder
-        /*if(left.get()[match.left].size()<right.get()[match.right].size())
-        {
-            for(int i = limit; i<right.get()[match.right].size(); i++)
-            {
-                const Diginstrument::Component<T> component = right.get()[match.right][i];
-                if(shifting)
-                {
-                    partial.emplace_back(
-                        component.frequency*rightRatio,
-                        component.phase*rightRatio,
-                        //amp uses weight!
-                        (component.amplitude*rightWeight)
-                    );
-                }
-                else
-                {
-                    partial.emplace_back(
-                        component.frequency,
-                        component.phase,
-                        //amp uses weight!
-                        (component.amplitude*rightWeight)
-                    );
-                }
-            }
-        }
-        if(left.get()[match.left].size()>right.get()[match.right].size())
-        {
-            for(int i = limit; i<left.get()[match.left].size(); i++)
-            {
-                const Diginstrument::Component<T> component = left.get()[match.left][i];
-                if(shifting)
-                {
-                    partial.emplace_back(
-                        component.frequency*leftRatio,
-                        component.phase*leftRatio,
-                        //amp uses weight!
-                        (component.amplitude*leftWeight)
-                    );
-                }
-                else
-                {
-                    partial.emplace_back(
-                        component.frequency,
-                        component.phase,
-                        //amp uses weight!
-                        (component.amplitude*leftWeight)
-                    );
-                }
-            }
-        }*/
-
         res.add(std::move(partial));
     }
 
-    //based on flute: unmatched adds definition
+    //add in unmatched partials attenuated
     for(auto k : unmatchedLeft)
     {
         std::vector<Diginstrument::Component<T>> partial;
@@ -182,13 +116,12 @@ PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const Partia
         for(int i = 0; i<leftPartial.size(); i++)
         { 
             const Diginstrument::Component<T> component = leftPartial[i];
-            //TODO: currently rethinking this
             if(shifting)
             {
                 partial.emplace_back(
                     component.frequency*leftRatio,
                     component.phase*leftRatio,
-                    //amp uses weight!
+                    //NOTE: amp uses weight!
                     (component.amplitude*leftWeight)
                 );
             }
@@ -197,15 +130,13 @@ PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const Partia
                 partial.emplace_back(
                     component.frequency,
                     component.phase,
-                    //amp uses weight!
+                    //NOTE: amp uses weight!
                     (component.amplitude*leftWeight)
                 );
             }            
         }
         res.add(std::move(partial));
     }
-
-    
     for(auto k : unmatchedRight)
     {
         std::vector<Diginstrument::Component<T>> partial;
@@ -219,7 +150,7 @@ PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const Partia
                 partial.emplace_back(
                     component.frequency*rightRatio,
                     component.phase*rightRatio,
-                    //amp uses weight!
+                    //NOTE: amp uses weight!
                     (component.amplitude*rightWeight)
                 );
             }
@@ -228,7 +159,7 @@ PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const Partia
                 partial.emplace_back(
                     component.frequency,
                     component.phase,
-                    //amp uses weight!
+                    //NOTE: amp uses weight!
                     (component.amplitude*rightWeight)
                 );
             }   
@@ -239,33 +170,25 @@ PartialSet<T> Diginstrument::Interpolator<T>::interpolatePartialSet(const Partia
 }
 
 template <typename T>
-Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel, const bool shifting) const
+Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T> &left, const Residual<T> &right, const T &target, const T &leftLabel, const T &rightLabel) const
 {
-    //TODO
+    //TODO: if one is empty, other should still be attenuated!
     if(right.get().size()==0) return left;
     if(left.get().size()==0) return right;
     const T rightWeight = (target-leftLabel) / (rightLabel - leftLabel);
     const T leftWeight = 1.0f - rightWeight;
-    //tmp: we can just comb them together, the frame index can be present multiple times!
-    //TODO: too slow!
-    //cout<<left.size()<<" "<<right.size()<<endl;
-    
+
     auto leftChannel = left.get().begin();
     auto rightChannel = right.get().begin();
-    //std::vector<std::pair<unsigned int, std::vector<Diginstrument::Component<T>>>> res;
     std::vector<std::vector<std::pair<unsigned int, Diginstrument::Component<T>>>> res;
-    //tmp
-    //cout<<left.get().size()<<" "<<right.get().size()<<endl;
-    int both = 0;
-    int leftOnly = 0;
-    int rightOnly = 0;
-    //TODO: the channels might be longer cuz of the extra ends i give while slicing?
+
+    //while there are channels to compare
+    //NOTE: channels are sorted descending in frequency
     while (leftChannel!=left.get().end() && rightChannel!=right.get().end())
     {
-        if(leftChannel->front().second.frequency < rightChannel->front().second.frequency)
+        //if left is higher, process and step left
+        if(leftChannel->front().second.frequency > rightChannel->front().second.frequency)
         {
-            //step left
-            //TODO: attenuate
             std::vector<std::pair<unsigned int, Diginstrument::Component<T>>> channel;
             channel.reserve(leftChannel->size());
             for(const auto & p : *leftChannel)
@@ -277,17 +200,13 @@ Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T
                                         p.second.amplitude*leftWeight
                                     ));
             }
-            //cout<<leftChannel->front().second.frequency<<endl;
             res.push_back(std::move(channel));
-            leftOnly++;
             leftChannel++;
             continue;
         }
-        if(rightChannel->front().second.frequency < leftChannel->front().second.frequency)
+        //if right is higher, process and step right
+        if(rightChannel->front().second.frequency > leftChannel->front().second.frequency)
         {
-            //step right
-            //TODO
-            //cout<<rightChannel->front().second.frequency<<endl;
             std::vector<std::pair<unsigned int, Diginstrument::Component<T>>> channel;
             channel.reserve(rightChannel->size());
             for(const auto & p : *rightChannel)
@@ -299,30 +218,24 @@ Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T
                                         p.second.amplitude*rightWeight
                                     ));
             }
-            //cout<<leftChannel->front().second.frequency<<endl;
             res.push_back(std::move(channel));
-            rightOnly++;
             rightChannel++;
             continue;
         }
+        //if frequencies match, interpolate by linear combination
         if(leftChannel->front().second.frequency == rightChannel->front().second.frequency)
         {
-            //cout<<"("<<leftChannel->front().second.frequency<<", "<<leftChannel->front().second.amplitude<<") - ("<<rightChannel->front().second.frequency<<", "<<rightChannel->front().second.amplitude<<")"<<endl;
-            //same frequency
-            //TODO
             std::vector<std::pair<unsigned int, Diginstrument::Component<T>>> channel;
             channel.reserve(max(leftChannel->size(), rightChannel->size()));
             auto leftFrame = leftChannel->begin();
             auto rightFrame = rightChannel->begin();
-            //TODO: are the channels sorted by frame?
+            //NOTE: channels are sorted ascending by frame position
+            //while there are frames to compare
             while(leftFrame!=leftChannel->end() && rightFrame!=rightChannel->end())
             {
-                //frames should be sorted ascending
+                //if positions match, interpolate
                 if(leftFrame->first == rightFrame->first)
                 {
-                    //same frame
-                    //cout<<"frame "<<leftFrame->first<<": ("<<leftFrame->second.frequency<<", "<<leftFrame->second.amplitude<<") - ("<<rightFrame->second.frequency<<", "<<rightFrame->second.amplitude<<")"<<endl;
-                    //TODO
                     const auto & leftComponent = leftFrame->second;
                     const auto & rightComponent = rightFrame->second;
                     channel.emplace_back(leftFrame->first,
@@ -335,10 +248,10 @@ Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T
                     rightFrame++;
                     continue;
                 }
+                //gap in right channel
                 if(leftFrame->first<rightFrame->first)
                 {
-                    //tmp: why did i even check channel sizes?
-                    //is this when right channel is empty here?
+                    //interpolate right sample at lefts position
                     const T rightPhase = Interpolation::Linear((T)(rightFrame-1)->first, (rightFrame-1)->second.phase, (T)rightFrame->first, rightFrame->second.phase, (T)leftFrame->first);
                     const T rightAmp = Interpolation::Linear((T)(rightFrame-1)->first, (rightFrame-1)->second.amplitude, (T)rightFrame->first, rightFrame->second.amplitude, (T)leftFrame->first);
                     channel.emplace_back(leftFrame->first,
@@ -351,9 +264,10 @@ Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T
                     continue;
                     
                 }
+                //gap in left channel
                 if(rightFrame->first<leftFrame->first)
                 {
-                    //right only
+                    //interpolate left sample at rights position
                     const T leftPhase = Interpolation::Linear((T)(leftFrame-1)->first, (leftFrame-1)->second.phase, (T)leftFrame->first, leftFrame->second.phase, (T)rightFrame->first);
                     const T leftAmp = Interpolation::Linear((T)(leftFrame-1)->first, (leftFrame-1)->second.amplitude, (T)leftFrame->first, leftFrame->second.amplitude, (T)rightFrame->first);
                     channel.emplace_back(rightFrame->first,
@@ -362,23 +276,21 @@ Residual<T> Diginstrument::Interpolator<T>::interpolateResidual(const Residual<T
                                         rightFrame->second.phase*rightWeight + leftPhase*leftWeight,
                                         rightFrame->second.amplitude*rightWeight + leftAmp*leftWeight
                                     ));
-                    //TODO
                     rightFrame++;
                     continue;
                 }
             }
-            //TODO: remainder
+            //TODO: remainder, in case one channel is shorter
+            //NOTE: this could be a problem, as when we synthesise piece-by-piece, we will just give back the longer one attenuated
             res.push_back(std::move(channel));
-
-            both++;
             leftChannel++;
             rightChannel++;
             continue;
         }
     }
-    //TODO: remainder
+    //TODO: remainder, we have to account for channels left in one neighbour when the other neighbour has reached end
 
-    //TODO: labels
+    //TODO: labels, not really neccessary
     return Residual<T>(res,{});
 }
 
