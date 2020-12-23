@@ -7,7 +7,7 @@ FIND_PROGRAM( GENHTML_PATH genhtml )
 FIND_PROGRAM( GCOVR_PATH gcovr PATHS ${CMAKE_SOURCE_DIR}/tests)
 
 file(GLOB TEST_SRC_FILES "*.cpp")
-file(GLOB SRC_FILES "../MultidimensionalNeighbourMap.hpp")
+file(GLOB SRC_FILES "../common/MultidimensionalNeighbourMap.hpp")
 
 set(CXX_TESTS_FLAGS "-g -O0 --coverage -fno-elide-constructors -fprofile-arcs -ftest-coverage -fno-inline -fno-inline-small-functions -fno-default-inline")
 set(C_TEST_FLAGS "-g -O0 --coverage -fno-elide-constructors -fprofile-arcs -ftest-coverage -fno-inline -fno-inline-small-functions -fno-default-inline")
@@ -17,7 +17,7 @@ SET( CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} ${C_TEST_FLAGS}")
 
 add_executable(diginstrument_test ${TEST_SRC_FILES} ${SRC_FILES})
 set_target_properties(diginstrument_test PROPERTIES EXCLUDE_FROM_ALL TRUE)
-target_include_directories(diginstrument_test PRIVATE "../")
+target_include_directories(diginstrument_test PRIVATE "../common")
 set_property(TARGET diginstrument_test PROPERTY CXX_STANDARD 14)
 
 target_link_libraries(diginstrument_test "${LIB_GTEST}" "${LIB_PTHREAD}")
