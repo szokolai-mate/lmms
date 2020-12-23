@@ -59,25 +59,33 @@ QString DiginstrumentPlugin::fullDisplayName() const
 void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 								   sampleFrame *_working_buf)
 {
-	/*TMP*/
-	//const double startTime = noteHandle->totalFramesPlayed() / (double)Engine::mixer()->processingSampleRate();
+	//assemble coordinates
 	vector<float> coordinates = {noteHandle->frequency()};
-	//tmp:
-	//cout<<"fr: "<<coordinates.front()<<endl;
-	//TODO: first coordinate is freq, might not be correct?
 	coordinates.reserve(this->coordinates.size()+2);
 	for(auto c : this->coordinates)
 	{
 		coordinates.emplace_back(c);
 	}
-	auto partials = interpolator.getPartials(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
-	//coordinates.emplace_back(startTime);
-	auto residual = interpolator.getResidual(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
-	vector<float> audioData = this->synth.playPartials(partials, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
-	//vector<float> audioData(noteHandle->framesLeftForCurrentPeriod(),0);
-	vector<float> residualData = this->synth.playResidual(residual, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
-
-	//tmp
+	//synthesize partials and residuals
+	vector<float> audioData = this->synth.playPartials(
+		interpolator.getPartials(
+			coordinates,
+			noteHandle->totalFramesPlayed(),
+			noteHandle->framesLeftForCurrentPeriod()),
+		noteHandle->framesLeftForCurrentPeriod(),
+		noteHandle->totalFramesPlayed(),
+		/*TMP: fix sample rate*/ 44100
+		);
+	vector<float> residualData = this->synth.playResidual(
+		interpolator.getResidual(
+			coordinates,
+			noteHandle->totalFramesPlayed(),
+			noteHandle->framesLeftForCurrentPeriod()),
+		noteHandle->framesLeftForCurrentPeriod(),
+		noteHandle->totalFramesPlayed(),
+		/*TMP: fix sample rate*/ 44100
+		);
+	//add residual and partials
 	for(int i = 0; i<residualData.size(); i++)
 	{
 		audioData[i]+=residualData[i];
@@ -91,6 +99,7 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 		_working_buf[counter + offset][0] = _working_buf[counter + offset][1] = frame;
 		counter++;
 	}
+	//TODO: release would be beneficial to combat popping
 	applyRelease(_working_buf, noteHandle);
 	instrumentTrack()->processAudioBuffer(_working_buf, audioData.size() + noteHandle->noteOffset(), noteHandle);
 }
