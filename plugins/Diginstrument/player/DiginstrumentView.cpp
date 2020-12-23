@@ -44,7 +44,6 @@ DiginstrumentView::~DiginstrumentView()
 
 void DiginstrumentView::modelChanged( void ){
     /*TODO */
-    //tmp
     if(castModel<DiginstrumentPlugin>()->fileName != "")
     {
       m_nameField->setText(castModel<DiginstrumentPlugin>()->instrument.name.c_str());
@@ -59,7 +58,6 @@ void DiginstrumentView::openInstrumentFile( void )
 	{
     castModel<DiginstrumentPlugin>()->setInstrumentFile( fileName );
     castModel<DiginstrumentPlugin>()->loadInstrumentFile();
-		Engine::getSong()->setModified();
     setDimensions();
     updateCoordinates();
 	}
@@ -68,7 +66,6 @@ void DiginstrumentView::openInstrumentFile( void )
 void DiginstrumentView::showInstumentVisualization()
 {
   //TODO: defaults/saving
-  //TODO: this may not properly give the dimensions!
   visualization->setDimensions(castModel<DiginstrumentPlugin>()->instrument.dimensions);
   updateVisualizationData(0,3000,20,22000,100/*TODO default values*/, {});
   visualization->show();
@@ -76,7 +73,7 @@ void DiginstrumentView::showInstumentVisualization()
 
 void DiginstrumentView::updateVisualizationData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, std::vector<float> coordinates)
 {
-  //TODO: TMP: smapleRate
+  //TODO: FIXME: TMP: smapleRate is fixed!
   const int sampleRate = 44100;
   visualization->setSurfaceData(visualization->getInstrumentSurfaceData(minTime/1000.0f,maxTime/1000.0f,minFreq,maxFreq,timeSamples, sampleRate, coordinates, castModel<DiginstrumentPlugin>()->interpolator));
   visualization->setPartialData(
@@ -88,7 +85,6 @@ void DiginstrumentView::updateVisualizationData(float minTime, float maxTime, fl
 
 void DiginstrumentView::setDimensions()
 {
-  //TODO: this may not properly give the dimensions!
   const auto dimensions = castModel<DiginstrumentPlugin>()->instrument.dimensions;
   for(auto * s : coordinateSliders)
   {

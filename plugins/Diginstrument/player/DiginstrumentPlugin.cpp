@@ -26,10 +26,7 @@ extern "C"
 	}
 }
 
-DiginstrumentPlugin::DiginstrumentPlugin(InstrumentTrack *_instrument_track) : Instrument(_instrument_track, &diginstrument_plugin_descriptor)
-{
-	/*TODO */
-}
+DiginstrumentPlugin::DiginstrumentPlugin(InstrumentTrack *_instrument_track) : Instrument(_instrument_track, &diginstrument_plugin_descriptor) {}
 
 DiginstrumentPlugin::~DiginstrumentPlugin() {}
 
@@ -51,7 +48,12 @@ void DiginstrumentPlugin::saveSettings(QDomDocument &_doc, QDomElement &_this)
 
 QString DiginstrumentPlugin::nodeName() const
 {
-	return "TEST";
+	return instrument.name.c_str();
+}
+
+QString DiginstrumentPlugin::fullDisplayName() const
+{
+	return instrument.name.c_str();
 }
 
 void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
@@ -71,7 +73,7 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 	auto partials = interpolator.getPartials(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
 	//coordinates.emplace_back(startTime);
 	auto residual = interpolator.getResidual(coordinates, noteHandle->totalFramesPlayed(), noteHandle->framesLeftForCurrentPeriod());
-	vector<float> audioData = this->synth.playNote(partials, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
+	vector<float> audioData = this->synth.playPartials(partials, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
 	//vector<float> audioData(noteHandle->framesLeftForCurrentPeriod(),0);
 	vector<float> residualData = this->synth.playResidual(residual, noteHandle->framesLeftForCurrentPeriod(), noteHandle->totalFramesPlayed(), /*TMP*/ 44100);
 
@@ -93,24 +95,16 @@ void DiginstrumentPlugin::playNote(NotePlayHandle *noteHandle,
 	instrumentTrack()->processAudioBuffer(_working_buf, audioData.size() + noteHandle->noteOffset(), noteHandle);
 }
 
-void DiginstrumentPlugin::deleteNotePluginData(NotePlayHandle *_note_to_play)
-{
-}
+//TODO: note plugin data could be the place to assign coordinates to notes!
+void DiginstrumentPlugin::deleteNotePluginData(NotePlayHandle *_note_to_play) {}
 
 f_cnt_t DiginstrumentPlugin::beatLen(NotePlayHandle *_n) const
 {
+	//TODO: what does this do?
 	return 0;
 }
 
-QString DiginstrumentPlugin::fullDisplayName() const
-{
-	return "TEST";
-}
-
-void DiginstrumentPlugin::sampleRateChanged()
-{
-	/*TODO*/
-}
+void DiginstrumentPlugin::sampleRateChanged() {}
 
 bool DiginstrumentPlugin::setInstrumentFile(const QString & fileName)
 {
@@ -121,7 +115,6 @@ bool DiginstrumentPlugin::setInstrumentFile(const QString & fileName)
 /**
  * Construct the instrument from the file given with setInstrumentFile()
  **/
-//TODO: what fields to populate, information to display
 bool DiginstrumentPlugin::loadInstrumentFile()
 {
 	QFile file(QString{fileName.c_str()});
@@ -130,9 +123,10 @@ bool DiginstrumentPlugin::loadInstrumentFile()
 		QByteArray arr = file.readAll();
 		file.close();
 		//TODO: separate into loading from file and loading saved
-		//TODO: catch?
+		//TODO: read file piece-by-piece
+		//TODO: exceptions?
 		instrument = Diginstrument::Instrument<float>::fromJSON(ordered_json::parse(arr.toStdString()));
-		//tmp:
+		//tmp: populate both instrument and interpolator
 		interpolator.clear();
 		interpolator.addResiduals(instrument.getResiduals());
 		interpolator.addPartialSets(instrument.getPartialSets());
@@ -140,23 +134,4 @@ bool DiginstrumentPlugin::loadInstrumentFile()
 		return true;
 	}
 	else return false;
-}
-
-std::vector<Diginstrument::Component<float>> DiginstrumentPlugin::getPartialVisualization(float minTimeMilisec, float maxTimeMilisec, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<float> coordinates)
-{
-	std::vector<Diginstrument::Component<float>> res;
-	//TODO: sample rate is needed here
-	const int sampleRate = 44100;
-	const auto partials = interpolator.getPartials(coordinates, (minTimeMilisec/1000.0)*sampleRate, ((maxTimeMilisec-minTimeMilisec)/1000.0)*sampleRate).get();
-	for(const auto & partial : partials)
-	{
-		for(int i = 1; i<partial.size(); i+=sampleRate/pointsPerSeconds)
-		{
-			
-			const double freq = abs(((partial[i].phase - partial[i-1].phase) * sampleRate) / (2*M_PI));
-			//pretty bad, i use phase as time
-			res.emplace_back(freq, (double)i/(double)sampleRate, partial[i].amplitude);
-		}
-	}
-	return res;
 }

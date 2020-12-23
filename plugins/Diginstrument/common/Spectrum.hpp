@@ -32,9 +32,6 @@ class Spectrum
 public:
   virtual std::vector<Component<T>> getComponents(const T quality) const = 0;
   virtual std::vector<Component<T>> getMatchables() const = 0;
-  //TMP: removed these methods, as the new method doesn't need them
-  //virtual std::vector<Component<T>> getUnmatchables() const = 0;
-  //virtual Component<T> operator[](const T frequency) const = 0;
   virtual bool empty() const = 0;
 
   std::vector<std::pair<std::string, T>> getLabels() const

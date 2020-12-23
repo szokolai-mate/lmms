@@ -1,7 +1,6 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
-#include <map>
 #include "SplineSpectrum.hpp"
 #include "Residual.hpp"
 #include "Dimension.h"

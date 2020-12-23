@@ -24,8 +24,6 @@
 #include <iostream>
 #include <fstream>
 
-//TODO: also fix visualization
-
 class AnalyzerPlugin : public ToolPlugin
 {
   Q_OBJECT

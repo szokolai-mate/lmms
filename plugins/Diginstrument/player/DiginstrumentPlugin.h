@@ -3,32 +3,15 @@
 #include "DiginstrumentView.h"
 #include "Synthesizer.h"
 #include "../common/Interpolator.h"
+#include "../common/Instrument.hpp"
 
 #include "Instrument.h"
 #include "InstrumentTrack.h"
-#include "Engine.h"
-#include "Mixer.h"
 
 #include "plugin_export.h"
 #include "embed.h"
 
-#include "SampleBuffer.h"
 #include <QFileInfo>
-#include "Song.h"
-
-/*tmp*/
-#include "../common/Approximation.hpp"
-#include "../common/Interpolation.hpp"
-#include "../common/PiecewiseBSpline.hpp"
-#include "../common/Spectrum.hpp"
-#include "../common/Dimension.h"
-#include "../common/Instrument.hpp"
-#include <nlohmann/json.hpp>
-#include <iostream>
-#include <QtDataVisualization>
-
-using ordered_json = nlohmann::basic_json<nlohmann::ordered_map, std::vector, std::string, bool, std::int64_t, std::uint64_t, float>;
-
 
 class DiginstrumentPlugin : public Instrument
 {
@@ -63,9 +46,6 @@ public:
   {
     return true;
   }
-
-  //TODO: move this to window too
-  std::vector<Diginstrument::Component<float>> getPartialVisualization(float minTime, float maxTime, float minFreq, float maxFreq, int pointsPerSeconds, std::vector<float> coordinates);
 
 protected:
   std::vector<float> coordinates;

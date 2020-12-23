@@ -1,9 +1,5 @@
 #include "PeakMatcher.h"
 
-//tmp
-#include <iostream>
-
-
 template <typename T>
 std::vector<Diginstrument::Match> Diginstrument::PeakMatcher<T>::makeAllSortedMatches(
     const std::vector<Diginstrument::Component<T>> & leftComponents,
@@ -11,7 +7,6 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher<T>::makeAllSortedMa
     std::function<double(const Diginstrument::Component<T>&, const Diginstrument::Component<T>&)> distanceFunction
     )
 {
-    //TODO: include a limit?
     std::vector<Match> allMatches;
     allMatches.reserve(leftComponents.size()*rightComponents.size());
     //calculate distances of all potential matches
@@ -28,48 +23,6 @@ std::vector<Diginstrument::Match> Diginstrument::PeakMatcher<T>::makeAllSortedMa
     return allMatches;
 }
 
-template <typename T>
-std::vector<Diginstrument::Match> Diginstrument::PeakMatcher<T>::matchPeaks(
-    const std::vector<Diginstrument::Component<T>> & leftComponents,
-    const std::vector<Diginstrument::Component<T>> & rightComponents,
-    std::function<double(const Diginstrument::Component<T>&, const Diginstrument::Component<T>&)> distanceFunction
-    )
-{
-    //TODO: can the cycle abort if we find a low number? or if the number is higher than the previous?
-    //maybe: frequency diff. limit?
-    //DONE: what if amounts of peaks dont match?
-    //DONE: it must be unique on both left AND right
-    //TODO: test results
-    //TODO: bug hunt: the "0 ratio split" is caused by mismatching a neighbouring(?) pair (example: ~500-~700;~700-~500)
-    //->they slide onto eachother: they change order ... maybe this can even work?
-    //CONCLUSION: this in not a bug, but a feature. need to make it work (if the spline is too small, remove it)
-    
-    auto allMatches = makeAllSortedMatches(leftComponents, rightComponents, distanceFunction);
-
-    std::set<unsigned int> chosenLeftPeaks;
-    std::set<unsigned int> chosenRightPeaks;
-    std::vector<Match> matches;
-    int i = 0;
-    //pick a match with peaks that have no matches yet
-    //while neither side has all its peaks matched and we have matches left
-    while( chosenLeftPeaks.size()!=leftComponents.size() && chosenRightPeaks.size()!=rightComponents.size() && i<allMatches.size())
-    {
-        const Match & match = allMatches[i];
-        //if neither peak was chosen already
-        if (chosenLeftPeaks.find(match.left) == chosenLeftPeaks.end() && chosenRightPeaks.find(match.right) == chosenRightPeaks.end())
-        {
-            //add the match and the peaks
-            matches.push_back(match);
-            chosenLeftPeaks.emplace(match.left);
-            chosenRightPeaks.emplace(match.right);
-        }
-        i++;
-    }
-
-    return matches;
-}
-
-//TODO: refactor
 template <typename T>
 std::vector<Diginstrument::Match> Diginstrument::PeakMatcher<T>::matchPeaks(const std::vector<Diginstrument::Component<T>> & leftComponents,
                                          const std::vector<Diginstrument::Component<T>> & rightComponents,

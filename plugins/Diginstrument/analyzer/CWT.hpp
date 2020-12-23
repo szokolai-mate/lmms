@@ -9,21 +9,23 @@
 //Interface for wavelib: https://github.com/rafat/wavelib
 
 /*
-wave_object wave; // wavelet object
-char *wave; // Wavelet - “morl”/”morlet”,”paul” or “dog”/”dgauss”
-int siglength;// Length of the original signal.
-double s0;// Smallest scale. Typically s0 <= 2 * dt 
-int J; // Total Number of Scales
-double dt; // Sampling Rate
-char type[10];// Scale Type - “pow” or “linear”
-int pow; // Base of power if scale type = “pow”. Default pow = 2
-double dj; // Separation between Scales. eg., scale = s0 * 2 ^ ( [0:N-1] *dj) or scale = s0 * [0:N-1] * dj
-double m; // Wavelet parameter param
-double smean; // Signal Mean
-cplx_data *output; // CWT Output Vector of size J * siglength. The vector is complex. The ith real value can be accessed wt->output[i].re and imaginary value by wt->output[i].im
-double *scale; // Scale vector of size J
-double *period; // Period vector of size J
-double *coi; // Cone of Influence vector of size siglength
+members of wavelet object:
+
+    wave_object wave; // wavelet object
+    char *wave; // Wavelet - “morl”/”morlet”,”paul” or “dog”/”dgauss”
+    int siglength;// Length of the original signal.
+    double s0;// Smallest scale. Typically s0 <= 2 * dt 
+    int J; // Total Number of Scales
+    double dt; // Sampling Rate
+    char type[10];// Scale Type - “pow” or “linear”
+    int pow; // Base of power if scale type = “pow”. Default pow = 2
+    double dj; // Separation between Scales. eg., scale = s0 * 2 ^ ( [0:N-1] *dj) or scale = s0 * [0:N-1] * dj
+    double m; // Wavelet parameter param
+    double smean; // Signal Mean
+    cplx_data *output; // CWT Output Vector of size J * siglength. The vector is complex. The ith real value can be accessed wt->output[i].re and imaginary value by wt->output[i].im
+    double *scale; // Scale vector of size J
+    double *period; // Period vector of size J
+    double *coi; // Cone of Influence vector of size siglength
 */
 
 template <typename T>
@@ -90,7 +92,6 @@ public:
 
     std::vector<std::complex<T>> getScaleCoefficients(unsigned int scaleIndex, unsigned int timeStep = 1)
     {
-        //TODO: test
         std::vector<std::complex<T>> res;
         res.reserve(signalLength/timeStep);
         for (int i = scaleIndex*signalLength; i<signalLength*(scaleIndex+1); i+=timeStep)

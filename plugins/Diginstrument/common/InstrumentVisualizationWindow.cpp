@@ -25,17 +25,17 @@ void Diginstrument::InstrumentVisualizationWindow::setPartialData(std::vector<st
         int sampleIndex = startFrame;
         for(const auto & component : partial)
         {
+            //TODO: this completely messes up somehow
             //calculate freq for visualization from diff of phase
-            //TODO: const double freq = abs(((phase[i] - phase[i - 1]) * m_sampleBuffer.sampleRate()) / (2 * M_PI));
+            //const double freq = abs(((phase[i] - phase[i - 1]) * m_sampleBuffer.sampleRate()) / (2 * M_PI));
             //reduce points
             if(sampleIndex%((int)std::round(partial.size()/100.0f))==0)
             {
-                //TODO: relative path? packaged resources?
-                graph->addCustomItem(new QCustom3DItem("/home/mate/projects/lmms/plugins/Diginstrument/analyzer/resources/marker_mesh.obj",
-                                                                QVector3D(component.frequency, component.amplitude, (float)sampleIndex / (float)sampleRate),
-                                                                QVector3D(0.01f, 0.01f, 0.01f),
-                                                                QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
-                                                                palette[colorIndex]));
+                graph->addCustomItem(new QCustom3DItem( ":marker_mesh.obj",
+                                                        QVector3D(component.frequency, component.amplitude, (float)sampleIndex / (float)sampleRate),
+                                                        QVector3D(0.01f, 0.01f, 0.01f),
+                                                        QQuaternion::fromAxisAndAngle(0.0f, 1.0f, 0.0f, 45.0f),
+                                                        palette[colorIndex]));
             }
             sampleIndex++;
         }
@@ -178,13 +178,9 @@ void  Diginstrument::InstrumentVisualizationWindow::slidersChanged()
 
 QtDataVisualization::QSurfaceDataArray * Diginstrument::InstrumentVisualizationWindow::getInstrumentSurfaceData(float minTime, float maxTime, float minFreq, float maxFreq, int timeSamples, int sampleRate, std::vector<float> coordinates, const Diginstrument::Interpolator<float> & interpolator)
 {
-	//TODO: better/refactoring
     //TODO: coordinates are empty on first open
     //TODO: exception inside qtvis 3d renderer
     //TODO: freq resolution is now unused
-
-    //TODO: this might be all messed up: why do i need time?
-	//coordinates.push_back(0);
 
     const float stepZ = (maxTime - minTime) / float(timeSamples - 1);
 
@@ -194,7 +190,6 @@ QtDataVisualization::QSurfaceDataArray * Diginstrument::InstrumentVisualizationW
 	{
 		float z = qMin(maxTime, (i * stepZ + minTime));
 		unsigned int startFrame = sampleRate*z;
-		//coordinates.back() = z;
 		
         //get one frame of residuals, which contains all non-empty channels!
 		const auto residualSlice = interpolator.getResidual(coordinates, startFrame, 1);

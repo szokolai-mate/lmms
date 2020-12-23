@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cmath>
 #include <vector>
 #include <set>
 #include <algorithm>
@@ -27,10 +26,6 @@ private:
                                              std::function<double(const Diginstrument::Component<T>&, const Diginstrument::Component<T>&)> distanceFunction
                                             );
 public:
-    static std::vector<Match> matchPeaks(const std::vector<Diginstrument::Component<T>> & leftComponents,
-                                         const std::vector<Diginstrument::Component<T>> & rightComponents,
-                                         std::function<double(const Diginstrument::Component<T>&, const Diginstrument::Component<T>&)> distanceFunction
-                                         );
     static std::vector<Match> matchPeaks(const std::vector<Diginstrument::Component<T>> & leftComponents,
                                          const std::vector<Diginstrument::Component<T>> & rightComponents,
                                          std::vector<unsigned int> & leftUnmatched,

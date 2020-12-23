@@ -1,7 +1,7 @@
 #include "Synthesizer.h"
 
 template <typename T>
-std::vector<float> Diginstrument::Synthesizer<T>::playNote(const PartialSet<T> & slice, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
+std::vector<float> Diginstrument::Synthesizer<T>::playPartials(const PartialSet<T> & slice, const unsigned int frames, const unsigned int offset, const unsigned int & sampleRate)
 {
     std::vector<float> res(frames, 0);
     for(const auto & partial : slice.get())

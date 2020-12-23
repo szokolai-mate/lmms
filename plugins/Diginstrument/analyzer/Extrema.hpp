@@ -56,7 +56,6 @@ public:
         return res;
     }
 
-    //TODO: changed from central; might have messed up peak detection
     template <class Iterator>
     static std::vector<std::pair<double, double>> makeFirstDerivative(Iterator begin, Iterator end)
     {
