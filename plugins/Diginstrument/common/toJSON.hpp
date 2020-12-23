@@ -1,7 +1,6 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
-#include "SplineSpectrum.hpp"
 #include "Residual.hpp"
 #include "Dimension.h"
 
@@ -13,27 +12,6 @@ template <typename T>
 class JSONConverter
 {
   public:
-    static ordered_json toJSON(const SplineSpectrum<T, 4> & spline)
-    {
-        ordered_json res;
-
-        for(auto & c : spline.getLabels())
-        {
-            res[c.first] = c.second;
-        }
-
-        auto splineCopy = spline;
-        ordered_json pieces = ordered_json::array();
-        for(auto & piece : splineCopy.getSpline().getPieces())
-        {
-            ordered_json pieceJSON;
-            pieceJSON["control_points"] = piece.getSpline().getControlPoints();
-            pieceJSON["knot_vector"] = piece.getSpline().getKnotVector();
-            pieces.push_back(pieceJSON);
-        }
-        res["pieces"] = std::move(pieces);
-        return res;
-    }
 
     static ordered_json toJSON(const MomentarySpectrum<T> & spline)
     {
@@ -186,24 +164,6 @@ class JSONConverter
         res["name"] = name;
 
         return res;
-    }
-    
-    static SplineSpectrum<T, 4> splineFromJSON(ordered_json object)
-    {
-        PiecewiseBSpline<T, 4> piecewise;
-        vector<pair<string, T>> labels;
-        for(auto & p : object["pieces"])
-        {
-            BSpline<T, 4> spline;
-            spline.setControlPoints(p["control_points"]);
-            spline.setKnotVector(p["knot_vector"]);
-            piecewise.add(spline);
-        }
-        for(auto & e : object.items())
-        {
-            if(e.value().is_number()) labels.emplace_back(e.key(), e.value());
-        }
-        return SplineSpectrum<T, 4>(std::move(piecewise), std::move(labels));
     }
 
     static Residual<T> residualFromJSON(ordered_json object)
